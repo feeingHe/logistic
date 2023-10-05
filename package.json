@@ -1,0 +1,45 @@
+{
+  "name": "logistic",
+  "version": "1.0.0",
+  "description": "logistic website",
+  "main": "index.js",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "boom": "^7.3.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-jwt": "^8.4.1",
+    "express-validator": "^6.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.29.4",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^8.3.0",
+    "nodemon": "^2.0.4"
+  },
+  "scripts": {
+    "start": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/turingNotaWoman/logistic.git"
+  },
+  "keywords": [
+    "logistic",
+    "nodejs",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/turingNotaWoman/logistic/issues"
+  },
+  "homepage": "https://github.com/turingNotaWoman/logistic/blob/TuringNotaMan/README.md"
+}
