@@ -12,7 +12,7 @@ function getUuid(len) {
 const checkRequiredField = (fields) => {
     const requiredFields = [];
     Object.entries(fields).forEach(([fieldKey, fieldVal]) => {
-        if (!fieldVal) {
+        if (fieldVal === undefined) {
             requiredFields.push(fieldKey);
         }
     })

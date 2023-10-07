@@ -22,7 +22,6 @@ function connect() {
 // 新建查询连接
 function querySql(sql) { 
   const conn = connect();
-  console.log('--conn:',conn)
   return new Promise((resolve, reject) => {
     try {
       conn.query(sql, (err, res) => {
@@ -41,6 +40,7 @@ function querySql(sql) {
     }
   })
 }
+
 
 // 查询一条语句
 function queryOne(sql) {

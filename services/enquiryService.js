@@ -12,17 +12,67 @@ const {
   CODE_ERROR,
   CODE_SUCCESS,
 } = require('../utils/constant');
+const moment = require('moment');
+
 
 // 通过任务名称或ID查询数据是否存在
 function findData(id) {
-  const query = `SELECT * FROM booking_manage WHERE id='${id}'`;
+  const query = `SELECT * FROM booking_manage WHERE id='${id}' and status != 0`;
   return queryOne(query);
+}
+// SELECT * FROM logistic.booking_manage WHERE id='b6rtlh7czwxgdpofa2q439';
+/**
+ *  fetch("http://127.0.0.1:9188/api/addEnquiry",{
+    method:'post',
+     body:JSON.stringify({
+        dest:'LAX',
+        customer:'feeny',
+         saler:'salererer',
+         ready_date:'2023-10-1 15:00:00',
+         transit_time_require:1.5,
+         mawb:'1.1',
+         flight:'BeiJing To LAX',
+         special_remark:'noting',
+         selling_price:31.52,
+         require_pickup:0,
+         quantity_estimate:35,
+         gross_weight_estimate:22.6,
+         cmb_estimate:1.1,
+         vol_estimate:167.167,
+         dim_estimate:'asa',
+         extend:'extend info...'
+
+     }),
+    headers:{
+         "Content-Type": "application/json",                
+         "Authorization":'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IjExMSIsInBlcm1pc3Npb24iOjEwLCJpYXQiOjE2OTY1OTYzMTIsImV4cCI6MTY5NjU5OTkxMn0.6kQhTMkr_z61XLTVUIpVI2cBFcu2nqECxLuDRk5gvPU',
+        "X-requestId":"asdasd123",
+    },
+})
+ */
+const returnSql = (fields = []) => {
+  let sqlStart = `insert into booking_manage(`;
+  const sqlMainKeys = [];
+  const sqlMainVals = [];
+  const hasQuot = ['string'];
+  fields.forEach(field => {
+    const { key, val, type } = field;
+    if (val !== undefined && val !== null) {
+      sqlMainKeys.push(key)
+      if (hasQuot.includes(type)) {
+        sqlMainVals.push("'" + val + "'")
+      } else {
+        sqlMainVals.push(val)
+      }
+    }
+  });
+  return (sqlStart + sqlMainKeys.join(',') + `) VALUES(` + sqlMainVals.join(',') + `) ;`).replace(/\n/g, ' ');
 }
 
 // add Enquiry
 function addEnquiry(req, res, next) {
-  validRequest(req, next).then(({ username }) => {
-    let { dest, customer, ready_date, transit_time_require, mawb, flight, special_remark, selling, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, extend } = req.body;
+  validRequest(req, res, next).then(({ username }) => {
+    let { dest, customer, saler, ready_date, transit_time_require, status, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ dest, customer, ready_date, transit_time_require });
     if (errorFields && errorFields.length) {
@@ -31,39 +81,98 @@ function addEnquiry(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
     }
+    if (![1, 2].includes(status)) {
+      res.json({
+        code: CODE_ERROR,
+        msg: 'Status must be either 1 or 2',
+        data: null
+      })
+      return;
+    }
+    const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+    const dateDay = timestamp.split(' ')[0].replace(/-/g, '');
+    // delete from booking_manage WHERE unique_id LIKE '%20231007%';
+    const queryUniqueIdSql = `SELECT * from booking_manage WHERE unique_id LIKE '%${dateDay}%';`;
+    querySql(queryUniqueIdSql).then((todayDataList = []) => {
+      const uniqueIdStack = todayDataList.map(list => list.unique_id).sort();
+      // unique_id no
+      const no = +(uniqueIdStack.slice(-1)[0] || (dateDay + "0000")) + 1;
+      uniqueIdStack.push(no);
+      const fields = [
+        { key: 'id', type: 'string', val: getUuid(32) },
+        { key: 'unique_id', type: 'string', val: no },
+        { key: 'parent_id', type: 'string', val: -1 },
+        { key: 'dest', type: 'string', val: dest },
+        { key: 'saler', type: 'string', val: saler },
+        { key: 'customer', type: 'string', val: customer },
+        { key: 'create_time', type: 'string', val: timestamp },
+        { key: 'creator', type: 'string', val: username },
+        { key: 'status', type: 'number', val: status },
+        { key: 'ready_date', type: 'string', val: ready_date },
+        { key: 'transit_time_require', type: 'string', val: transit_time_require },
 
-    const query = `insert into booking_manage(id,unique_id,parent_id,dest, customer, ready_date, transit_time_require, mawb,flight,special_remark,selling,require_pickup,quantity_estimate,gross_weight_estimate,cmb_estimate,vol_estimate,dim_estimate,creater,create_time,action_type,extend)
-     values(` + [getUuid(32), getUuid(32), "-1", dest, customer, ready_date, transit_time_require, mawb, flight, special_remark, selling, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, username, Date.now(), 'added', extend].join(',') + `)`;
-    querySql(query)
-      .then(data => {
-        // console.log('添加任务===', data);
-        if (!data || data.length === 0) {
+        // estimate
+        { key: 'quantity_estimate', type: 'number', val: quantity_estimate },
+        { key: 'gross_weight_estimate', type: 'number', val: gross_weight_estimate },
+        { key: 'cmb_estimate', type: 'number', val: cmb_estimate },
+        { key: 'vol_estimate', type: 'number', val: vol_estimate },
+        { key: 'dim_estimate', type: 'string', val: dim_estimate },
+        // actual
+        { key: 'quantity_actual', type: 'number', val: quantity_actual },
+        { key: 'gross_weight_actual', type: 'number', val: gross_weight_actual },
+        { key: 'cmb_actual', type: 'number', val: cmb_actual },
+        { key: 'vol_actual', type: 'number', val: vol_actual },
+        { key: 'dim_actual', type: 'string', val: dim_actual },
+
+        { key: 'mawb', type: 'string', val: mawb },
+        { key: 'flight', type: 'string', val: flight },
+        { key: 'special_remark', type: 'string', val: special_remark },
+        { key: 'selling_price', type: 'number', val: selling_price },
+        { key: 'require_pickup', type: 'number', val: require_pickup },
+        { key: 'action_type', type: 'string', val: 'added' },
+        { key: 'extend', type: 'string', val: extend }
+      ];
+      const addSql = returnSql(fields);
+      console.log('...addEnquiry:', addSql);
+
+      querySql(addSql)
+        .then(data => {
+          // console.log('添加任务===', data);
+          if (!data || data.length === 0) {
+            res.json({
+              code: CODE_ERROR,
+              msg: 'insert data error',
+              data: null
+            })
+          } else {
+            res.json({
+              code: CODE_SUCCESS,
+              msg: 'insert data success',
+              data: null
+            })
+          }
+        }).catch(err => {
           res.json({
             code: CODE_ERROR,
-            msg: 'insert data error',
+            msg: 'error:' + err.message,
             data: null
-          })
-        } else {
-          res.json({
-            code: CODE_SUCCESS,
-            msg: 'insert data success',
-            data: null
-          })
-        }
-      }).catch(err => {
-        res.json({
-          code: CODE_ERROR,
-          msg: 'error:' + err.message,
-          data: null
+          });
+          console.log('--error:', err.message)
         })
-      })
+    }).catch(err => {
+      console.log('--queryUniqueIdSql err:', err)
+    })
+
+  }).catch((err) => {
+    console.log('add error:' + err.message)
   })
 }
 
 // delete Enquiry
 function deleteEnquiry(req, res, next) {
-  validRequest(req, next).then(({ username }) => {
+  validRequest(req, res, next).then(({ username }) => {
     let { id } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ id });
@@ -73,31 +182,80 @@ function deleteEnquiry(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
     }
+    console.log('--start delete!!!', username)
     findData(id).then(data => {
       if (!data || data.length === 0) {
         res.json({
           code: CODE_ERROR,
-          msg: 'delete data error',
+          msg: 'delete data error:can not find this data by id ' + id,
           data: null
         })
       } else {
-        const insertSql = `insert into booking_manage(id,unique_id,parent_id,status,dest, customer, ready_date, transit_time_require, mawb,flight,special_remark,selling,require_pickup,quantity_estimate,gross_weight_estimate,cmb_estimate,vol_estimate,dim_estimate,creater,create_time,action_type,extend)
-     values(` + [getUuid(32), data.unique_id, data.id, 0, data.dest, data.customer, data.ready_date, data.transit_time_require, data.mawb, data.flight, data.special_remark, data.selling, data.require_pickup, data.quantity_estimate, data.gross_weight_estimate, data.cmb_estimate, data.vol_estimate, data.dim_estimate, username, Date.now(), 'deleted', data.extend].join(',') + `) and UPDATE booking_manage SET status=0 WHERE unique_id = ${id} LIMIT 2`;
-        querySql(insertSql)
-          .then(data => {
+        const deleteSql = `UPDATE booking_manage SET status=0 WHERE id = '${id}';`;
+
+        querySql(deleteSql)
+          .then(queryData => {
             // console.log('删除任务===', data);
-            if (!data || data.length === 0) {
-              res.json({
-                code: CODE_ERROR,
-                msg: 'delete data error',
-                data: null
-              })
+            if (!queryData || queryData.length === 0) {
+              throw new Error('error when update previous data')
             } else {
-              res.json({
-                code: CODE_SUCCESS,
-                msg: 'delete data success',
-                data: null
+              const fields = [
+                { key: 'id', type: 'string', val: getUuid(32) },
+                { key: 'unique_id', type: 'string', val: data.unique_id },
+                { key: 'parent_id', type: 'string', val: data.id },
+                { key: 'dest', type: 'string', val: data.dest },
+                { key: 'saler', type: 'string', val: data.saler },
+                { key: 'customer', type: 'string', val: data.customer },
+                { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
+                { key: 'creator', type: 'string', val: username },
+                { key: 'status', type: 'number', val: 0 },
+                { key: 'ready_date', type: 'string', val: moment(data.ready_date).format('YYYY-MM-DD HH:mm:ss') },
+                { key: 'transit_time_require', type: 'string', val: data.transit_time_require },
+
+                // estimate
+                { key: 'quantity_estimate', type: 'number', val: data.quantity_estimate },
+                { key: 'gross_weight_estimate', type: 'number', val: data.gross_weight_estimate },
+                { key: 'cmb_estimate', type: 'number', val: data.cmb_estimate },
+                { key: 'vol_estimate', type: 'number', val: data.vol_estimate },
+                { key: 'dim_estimate', type: 'string', val: data.dim_estimate },
+                // actual
+                { key: 'quantity_actual', type: 'number', val: data.quantity_actual },
+                { key: 'gross_weight_actual', type: 'number', val: data.gross_weight_actual },
+                { key: 'cmb_actual', type: 'number', val: data.cmb_actual },
+                { key: 'vol_actual', type: 'number', val: data.vol_actual },
+                { key: 'dim_actual', type: 'string', val: data.dim_actual },
+
+                { key: 'mawb', type: 'string', val: data.mawb },
+                { key: 'flight', type: 'string', val: data.flight },
+                { key: 'special_remark', type: 'string', val: data.special_remark },
+                { key: 'selling_price', type: 'number', val: data.selling_price },
+                { key: 'require_pickup', type: 'number', val: data.require_pickup },
+                { key: 'console_id', type: 'string', val: data.console_id },
+                { key: 'action_type', type: 'string', val: 'deleted' },
+                { key: 'extend', type: 'string', val: data.extend }
+              ];
+              const insertSql = returnSql(fields);
+              console.log('...deleteEnquiry:', insertSql);
+
+              querySql(insertSql).then(data => {
+                if (!data || data.length === 0) {
+                  throw new Error('');
+                } else {
+                  res.json({
+                    code: CODE_SUCCESS,
+                    msg: 'delete data success',
+                    data: null
+                  });
+                }
+              }).catch((err) => {
+                res.json({
+                  code: CODE_ERROR,
+                  msg: 'delete data error',
+                  data: null
+                })
+                console.log(err)
               })
             }
           })
@@ -110,20 +268,23 @@ function deleteEnquiry(req, res, next) {
             console.log(err)
           })
       }
-    }).catch(() => {
+    }).catch((err) => {
       res.json({
         code: CODE_ERROR,
         msg: 'id is invalid!',
         data: null
-      })
+      });
+      console.log('delete error:', err.message)
     })
+  }).catch((err) => {
+    console.log('add error:' + err.message)
   })
 }
 
 // modify Enquiry
 function modifyEnquiry(req, res, next) {
-  validRequest(req, next).then(({ username }) => {
-    let { id } = req.body;
+  validRequest(req, res, next).then(({ username }) => {
+    let { id, status } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ id });
     if (errorFields && errorFields.length) {
@@ -132,43 +293,100 @@ function modifyEnquiry(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
+    }
+    if (![1, 2, 3].includes(status)) {
+      res.json({
+        code: CODE_ERROR,
+        msg: 'Status must be either 1 or 2 or 3',
+        data: null
+      })
+      return;
     }
     findData(id).then(data => {
       if (!data || data.length === 0) {
         res.json({
           code: CODE_ERROR,
-          msg: 'modify data error',
+          msg: 'modify data error:can not find this data',
           data: null
         })
       } else {
-        const assginedData = Object.assign({}, data, req.body);
-        const insertSql = `insert into booking_manage(id,unique_id,parent_id,status,dest, customer, ready_date, transit_time_require, mawb,flight,special_remark,selling,require_pickup,quantity_estimate,gross_weight_estimate,cmb_estimate,vol_estimate,dim_estimate,creater,create_time,action_type,extend)
-     values(` + [getUuid(32), assginedData.unique_id, assginedData.id, 1, assginedData.dest, assginedData.customer, assginedData.ready_date, assginedData.transit_time_require, assginedData.mawb, assginedData.flight, assginedData.special_remark, assginedData.selling, assginedData.require_pickup, assginedData.quantity_estimate, assginedData.gross_weight_estimate, assginedData.cmb_estimate, assginedData.vol_estimate, assginedData.dim_estimate, username, Date.now(), 'modified', assginedData.extend].join(',') + `) and UPDATE booking_manage SET status=0 WHERE id = ${id}  LIMIT 2`;
-        querySql(insertSql)
-          .then(data => {
-            // console.log('删除任务===', data);
-            if (!data || data.length === 0) {
-              res.json({
-                code: CODE_ERROR,
-                msg: 'modify data error',
-                data: null
+        const deleteSql = `UPDATE booking_manage SET status=0 WHERE id = '${id}';`;
+
+        querySql(deleteSql).then((queryData) => {
+          if (!queryData || queryData.length === 0) {
+            throw new Error('error when update previous data by id ' + id)
+          } else {
+            const assginedData = Object.assign({}, data, req.body, { unique_id: data.unique_id });
+
+            const fields = [
+              { key: 'id', type: 'string', val: getUuid(32) },
+              { key: 'unique_id', type: 'string', val: assginedData.unique_id },
+              { key: 'parent_id', type: 'string', val: data.id },
+              { key: 'dest', type: 'string', val: assginedData.dest },
+              { key: 'saler', type: 'string', val: assginedData.saler },
+              { key: 'customer', type: 'string', val: assginedData.customer },
+              { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
+              { key: 'creator', type: 'string', val: username },
+              { key: 'status', type: 'number', val: assginedData.status },
+              { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },
+              { key: 'transit_time_require', type: 'string', val: assginedData.transit_time_require },
+
+              // estimate
+              { key: 'quantity_estimate', type: 'number', val: assginedData.quantity_estimate },
+              { key: 'gross_weight_estimate', type: 'number', val: assginedData.gross_weight_estimate },
+              { key: 'cmb_estimate', type: 'number', val: assginedData.cmb_estimate },
+              { key: 'vol_estimate', type: 'number', val: assginedData.vol_estimate },
+              { key: 'dim_estimate', type: 'string', val: assginedData.dim_estimate },
+              // actual
+              { key: 'quantity_actual', type: 'number', val: assginedData.quantity_actual },
+              { key: 'gross_weight_actual', type: 'number', val: assginedData.gross_weight_actual },
+              { key: 'cmb_actual', type: 'number', val: assginedData.cmb_actual },
+              { key: 'vol_actual', type: 'number', val: assginedData.vol_actual },
+              { key: 'dim_actual', type: 'string', val: assginedData.dim_actual },
+
+              { key: 'mawb', type: 'string', val: assginedData.mawb },
+              { key: 'flight', type: 'string', val: assginedData.flight },
+              { key: 'special_remark', type: 'string', val: assginedData.special_remark },
+              { key: 'selling_price', type: 'number', val: assginedData.selling_price },
+              { key: 'require_pickup', type: 'number', val: assginedData.require_pickup },
+              { key: 'console_id', type: 'string', val: assginedData.console_id },
+              { key: 'action_type', type: 'string', val: 'modified' },
+              { key: 'extend', type: 'string', val: assginedData.extend }
+            ];
+            const insertSql = returnSql(fields);
+            console.log('---modifyEnquiry insert sql:', insertSql);
+            querySql(insertSql)
+              .then(insertData => {
+                // console.log('删除任务===', data);
+                if (!insertData || insertData.length === 0) {
+                  throw new Error('error when update previous data')
+                } else {
+                  res.json({
+                    code: CODE_SUCCESS,
+                    msg: 'modify data success',
+                    data: null
+                  })
+                }
               })
-            } else {
-              res.json({
-                code: CODE_SUCCESS,
-                msg: 'modify data success',
-                data: null
+              .catch(err => {
+                res.json({
+                  code: CODE_ERROR,
+                  msg: 'error:' + err.message,
+                  data: null
+                })
+                console.log(err)
               })
-            }
+          }
+        }).catch(err => {
+          res.json({
+            code: CODE_ERROR,
+            msg: 'error:' + err.message,
+            data: null
           })
-          .catch(err => {
-            res.json({
-              code: CODE_ERROR,
-              msg: 'error:' + err.message,
-              data: null
-            })
-            console.log(err)
-          })
+          console.log(err)
+        })
+
       }
     }).catch(() => {
       res.json({
@@ -177,48 +395,89 @@ function modifyEnquiry(req, res, next) {
         data: null
       })
     })
+  }).catch((err) => {
+    console.log('add error:' + err.message)
   })
 }
 
+const returnQuerySql = (fields = [], page_num, page_size) => {
+  const sqlStart = `SELECT *
+  FROM booking_manage
+  WHERE `;
+  let sqlMain = ``;
+  const hasQuot = ['string'];
+  fields.forEach(field => {
+    const { key, val, type } = field;
+    if (val !== undefined) {
+      if (sqlMain) {
+        sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+      } else {
+        sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+      }
+    }
+  });
+  return (sqlStart + sqlMain + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n/g, ' ');
+}
 // Enquiry query
 function queryEnquiry(req, res, next) {
-  validRequest(req, next).then(() => {
-    let { id, sale_name, customer, dest, flight, page_size = 10, page_num = 1 } = req.body;
-    // check required fields
-     const errorFields = checkRequiredField({ id });
-    if (errorFields && errorFields.length) {
-      res.json({
-        code: CODE_ERROR,
-        msg: errorFields.join(',') + ' can not be empty',
-        data: null
-      })
-    }
+  validRequest(req, res, next).then(() => {
+    let { id, unique_id, parent_id, status = 1, saler, customer, dest, flight, transit_time_require, page_num = 1, page_size = 10 } = req.body;
+    const fields = [
+      { key: 'id', type: 'string', val: id },
+      { key: 'unique_id', type: 'string', val: unique_id },
+      { key: 'parent_id', type: 'string', val: parent_id },
 
-    const sql = `SELECT *
-        FROM booking_manage
-        WHERE 
-            (id = ${id} OR ? IS NULL)
-            AND (sale_name =  ${sale_name} OR ? IS NULL)
-            AND (customer =  ${customer} OR ? IS NULL)
-            AND (dest =  ${dest} OR ? IS NULL)
-            AND (flight =  ${flight} OR ? IS NULL)
-        LIMIT ${page_num} OFFSET ${page_size * (page_num - 1)}`;
+      { key: 'status', type: 'number', val: status },
+      { key: 'saler', type: 'string', val: saler },
+      { key: 'customer', type: 'string', val: customer },
+      { key: 'dest', type: 'string', val: dest },
+      { key: 'flight', type: 'string', val: flight },
+      { key: 'transit_time_require', type: 'number', val: transit_time_require }
+    ];
+    console.log('--------querySql1:', sql);
+    const sql = returnQuerySql(fields, page_num, page_size);
+
+    console.log('--------querySql2:', sql);
+
     querySql(sql)
-      .then(data => {
+      .then((data) => {
         // console.log('删除任务===', data);
-        if (!data || data.length === 0) {
-          res.json({
-            code: CODE_ERROR,
-            msg: 'modify data error',
-            data: null
+        if (data && data.length) {
+          // res.json({
+          //   code: CODE_SUCCESS,
+          //   msg: 'query data success',
+          //   data: data
+          // })
+          // return;
+          const quoteIds = data.map(d => d.unique_id).filter(Boolean) || [];
+          const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${quoteIds.join(',')});`;
+          console.log('---queryQuotesSql:',queryQuotesSql);
+          querySql(queryQuotesSql).then((quotesList) => {
+            res.json({
+              code: CODE_SUCCESS,
+              msg: 'query data success',
+              data: data.map(d => {
+                const { unique_id } = d;
+                const underQuotes = quotesList.find(list => list.order_unique_id === unique_id);
+                return Object.assign({}, data, { quotes: underQuotes || [] })
+              })
+            })
+          }).catch(err => {
+            res.json({
+              code: CODE_ERROR,
+              msg: 'error when query sub quotes:' + err.message,
+              data: null
+            })
+            console.log(err)
           })
-        } else {
+        }else{
           res.json({
             code: CODE_SUCCESS,
             msg: 'query data success',
-            data: data
+            data: []
           })
         }
+
       })
       .catch(err => {
         res.json({
@@ -228,6 +487,8 @@ function queryEnquiry(req, res, next) {
         })
         console.log(err)
       })
+  }).catch((err) => {
+    console.log('add error:' + err.message)
   })
 }
 

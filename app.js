@@ -6,7 +6,7 @@
 
 const bodyParser = require('body-parser'); // 引入body-parser模块
 const express = require('express'); // 引入express模块
-const cors = require('cors'); // 引入cors模块
+// const cors = require('cors'); // 引入cors模块
 const routes = require('./routes'); //导入自定义路由文件，创建模块化路由
 const app = express();
 const path = require('path'); // 引入path模块

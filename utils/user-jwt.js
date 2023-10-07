@@ -38,7 +38,7 @@ const jwtAuth = expressJwt({
 // jwt-token解析
 function decode(req) {
   const token = req.get('Authorization');
-  console.log('---token:',token)
+  // console.log('---token:', token)
   return jwt.verify(token, PRIVATE_KEY);
 }
 

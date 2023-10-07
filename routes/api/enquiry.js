@@ -9,10 +9,10 @@ const router = express.Router();
 const service = require('../../services/enquiryService');
 
 // api
-router.post('/addEnquiry', service.addEnquiry);
-router.post('/deleteEnquiry', service.deleteEnquiry);
-router.post('/modifyEnquiry', service.modifyEnquiry);
-router.post('/queryEnquiry', service.queryEnquiry);
+router.post('/addOrder', service.addEnquiry);
+router.post('/deleteOrder', service.deleteEnquiry);
+router.post('/modifyOrder', service.modifyEnquiry);
+router.post('/queryOrder', service.queryEnquiry);
 
 
 module.exports = router;

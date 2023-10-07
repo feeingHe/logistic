@@ -18,7 +18,7 @@ const moment = require('moment');
 
 // 登录
 function login(req, res, next) {
-  validRequest(req, next).then(() => {
+  validRequest(req, res, next).then(() => {
     let { account, password } = req.body;
     const errorFields = checkRequiredField({ account, password });
     if (errorFields && errorFields.length) {
@@ -27,6 +27,7 @@ function login(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
     }
     const query = `select * from user_manage where account='${account}' and password='${md5(password)}'`;
     getToken({
@@ -36,13 +37,15 @@ function login(req, res, next) {
       successMsg: 'login success',
       res,
     })
+  }).catch((err)=>{
+    console.log('add error:' + err.message)
   })
 }
 
 
 // 注册
 function register(req, res, next) {
-  validRequest(req, next).then(() => {
+  validRequest(req, res, next).then(() => {
     let { account, password } = req.body;
     const errorFields = checkRequiredField({ account, password });
     if (errorFields && errorFields.length) {
@@ -51,6 +54,7 @@ function register(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
     }
     findUser(account)
       .then(data => {
@@ -94,13 +98,15 @@ function register(req, res, next) {
           data: null
         })
       })
+  }).catch((err)=>{
+    console.log('add error:' + err.message)
   })
 }
 
 
 // 重置密码
 function resetPwd(req, res, next) {
-  validRequest(req, next).then(() => {
+  validRequest(req, res, next).then(() => {
     let { account, oldPassword, newPassword } = req.body;
     const errorFields = checkRequiredField({ account, oldPassword, newPassword });
     if (errorFields && errorFields.length) {
@@ -109,6 +115,7 @@ function resetPwd(req, res, next) {
         msg: errorFields.join(',') + ' can not be empty',
         data: null
       })
+      return;
     }
     oldPassword = md5(oldPassword);
     validateUser(account, oldPassword)
@@ -149,6 +156,8 @@ function resetPwd(req, res, next) {
           })
         }
       })
+  }).catch((err)=>{
+    console.log('add error:' + err.message)
   })
 }
 
