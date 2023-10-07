@@ -409,7 +409,7 @@ function queryEnquiry(req, res, next) {
       { key: 'unique_id', type: 'string', val: unique_id },
       { key: 'parent_id', type: 'string', val: parent_id },
 
-      { key: 'status', type: 'array', val: status ? [status] : [1,2,3] },
+      { key: 'status', type: 'array', val: status === undefined ? [status] : [1,2,3] },
       { key: 'saler', type: 'string', val: saler },
       { key: 'customer', type: 'string', val: customer },
       { key: 'dest', type: 'string', val: dest },

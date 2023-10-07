@@ -336,7 +336,7 @@ function queryQuote(req, res, next) {
       { key: 'flight', type: 'string', val: flight },
       { key: 'saler', type: 'string', val: saler },
       { key: 'creator', type: 'string', val: creator },
-      { key: 'status', type: 'array', val: status ? [status] : [1,2] }
+      { key: 'status', type: 'array', val: status === undefined ? [status] : [1,2] }
     ];
 
     const sql = returnQuerySql('quotes_manage',fields, page_num, page_size);

@@ -320,7 +320,7 @@ function queryConsole(req, res, next) {
       { key: 'id', type: 'string', val: id },
       { key: 'unique_id', type: 'string', val: unique_id },
       { key: 'parent_id', type: 'string', val: parent_id },
-      { key: 'status', type: 'array', val: status ? [status] : [1, 2] },
+      { key: 'status', type: 'array', val: status === undefined ? [status] : [1, 2] },
       { key: 'name', type: 'string', val: name },
       { key: 'flight', type: 'string', val: flight },
       { key: 'dest', type: 'string', val: dest },
