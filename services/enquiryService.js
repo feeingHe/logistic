@@ -6,7 +6,7 @@
 
 
 const { querySql, queryOne } = require('../utils/index');
-const { validRequest } = require('./common');
+const { validRequest, returnQuerySql } = require('./common');
 const { checkRequiredField, getUuid } = require('../utils/util')
 const {
   CODE_ERROR,
@@ -72,7 +72,7 @@ const returnSql = (fields = []) => {
 // add Enquiry
 function addEnquiry(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { dest, customer, saler, ready_date, transit_time_require, status, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, extend } = req.body;
+    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ dest, customer, ready_date, transit_time_require });
     if (errorFields && errorFields.length) {
@@ -241,7 +241,7 @@ function deleteEnquiry(req, res, next) {
 
               querySql(insertSql).then(data => {
                 if (!data || data.length === 0) {
-                  throw new Error('');
+                  throw new Error('delete error');
                 } else {
                   res.json({
                     code: CODE_SUCCESS,
@@ -277,14 +277,14 @@ function deleteEnquiry(req, res, next) {
       console.log('delete error:', err.message)
     })
   }).catch((err) => {
-    console.log('add error:' + err.message)
+    console.log('delete error:' + err.message)
   })
 }
 
 // modify Enquiry
 function modifyEnquiry(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { id, status } = req.body;
+    let { id, status = 1 } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ id });
     if (errorFields && errorFields.length) {
@@ -396,48 +396,27 @@ function modifyEnquiry(req, res, next) {
       })
     })
   }).catch((err) => {
-    console.log('add error:' + err.message)
+    console.log('modify error:' + err.message)
   })
 }
 
-const returnQuerySql = (fields = [], page_num, page_size) => {
-  const sqlStart = `SELECT *
-  FROM booking_manage
-  WHERE `;
-  let sqlMain = ``;
-  const hasQuot = ['string'];
-  fields.forEach(field => {
-    const { key, val, type } = field;
-    if (val !== undefined) {
-      if (sqlMain) {
-        sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
-      } else {
-        sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
-      }
-    }
-  });
-  return (sqlStart + sqlMain + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n/g, ' ');
-}
 // Enquiry query
 function queryEnquiry(req, res, next) {
   validRequest(req, res, next).then(() => {
-    let { id, unique_id, parent_id, status = 1, saler, customer, dest, flight, transit_time_require, page_num = 1, page_size = 10 } = req.body;
+    let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, page_num = 1, page_size = 10 } = req.body;
     const fields = [
       { key: 'id', type: 'string', val: id },
       { key: 'unique_id', type: 'string', val: unique_id },
       { key: 'parent_id', type: 'string', val: parent_id },
 
-      { key: 'status', type: 'number', val: status },
+      { key: 'status', type: 'array', val: status ? [status] : [1,2,3] },
       { key: 'saler', type: 'string', val: saler },
       { key: 'customer', type: 'string', val: customer },
       { key: 'dest', type: 'string', val: dest },
       { key: 'flight', type: 'string', val: flight },
       { key: 'transit_time_require', type: 'number', val: transit_time_require }
     ];
-    console.log('--------querySql1:', sql);
-    const sql = returnQuerySql(fields, page_num, page_size);
-
-    console.log('--------querySql2:', sql);
+    const sql = returnQuerySql('booking_manage',fields, page_num, page_size);
 
     querySql(sql)
       .then((data) => {
@@ -450,27 +429,38 @@ function queryEnquiry(req, res, next) {
           // })
           // return;
           const quoteIds = data.map(d => d.unique_id).filter(Boolean) || [];
-          const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${quoteIds.join(',')});`;
-          console.log('---queryQuotesSql:',queryQuotesSql);
-          querySql(queryQuotesSql).then((quotesList) => {
+          if (quoteIds.length) {
+            const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${quoteIds.map(id => {
+              if (typeof id === 'string') return `"${id}"`;
+              return id;
+            }).join(',')}) AND status != 0;`;
+            querySql(queryQuotesSql).then((quotesList) => {
+              res.json({
+                code: CODE_SUCCESS,
+                msg: 'query data success',
+                data: data.map(d => {
+                  const { unique_id } = d;
+                  const underQuotes = quotesList.find(list => list.order_unique_id === unique_id);
+                  return Object.assign({}, d, { quotes: underQuotes || [] })
+                })
+              })
+            }).catch(err => {
+              res.json({
+                code: CODE_ERROR,
+                msg: 'error when query sub quotes:' + err.message,
+                data: null
+              })
+              console.log(err)
+            })
+          } else {
             res.json({
               code: CODE_SUCCESS,
               msg: 'query data success',
-              data: data.map(d => {
-                const { unique_id } = d;
-                const underQuotes = quotesList.find(list => list.order_unique_id === unique_id);
-                return Object.assign({}, data, { quotes: underQuotes || [] })
-              })
+              data
             })
-          }).catch(err => {
-            res.json({
-              code: CODE_ERROR,
-              msg: 'error when query sub quotes:' + err.message,
-              data: null
-            })
-            console.log(err)
-          })
-        }else{
+          }
+
+        } else {
           res.json({
             code: CODE_SUCCESS,
             msg: 'query data success',
@@ -488,7 +478,7 @@ function queryEnquiry(req, res, next) {
         console.log(err)
       })
   }).catch((err) => {
-    console.log('add error:' + err.message)
+    console.log('query error:' + err.message)
   })
 }
 

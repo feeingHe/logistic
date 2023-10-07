@@ -11,6 +11,7 @@ const userRouter = require('./api/users'); // 引入user路由模块
 const menuRouter = require('./api/menu'); // 引入user路由模块
 const enquiryRouter = require('./api/enquiry'); // 引入task路由模块
 const quoteRouter = require('./api/quote'); // 引入task路由模块
+const consoleRouter = require('./api/console'); // 引入task路由模块
 const { jwtAuth } = require('../utils/user-jwt'); // 引入jwt认证函数
 const router = express.Router(); // 注册路由 
 
@@ -21,6 +22,7 @@ router.use('/api', userRouter); // 注入用户路由模块
 router.use('/api', menuRouter); // 菜单路由模块
 router.use('/api', enquiryRouter); // enquiry路由模块
 router.use('/api', quoteRouter); // quote路由模块
+router.use('/api', consoleRouter); // console路由模块
 
 // 自定义统一异常处理中间件，需要放在代码最后
 // !!!next 不能删除！！！！

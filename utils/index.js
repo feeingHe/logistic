@@ -44,11 +44,10 @@ function querySql(sql) {
 
 // 查询一条语句
 function queryOne(sql) {
-  console.log('rqueryOne===',sql)
+  // console.log('rqueryOne===',sql)
 
   return new Promise((resolve, reject) => {
     querySql(sql).then(res => {
-      console.log('res===',res)
       if (res && res.length > 0) {
         resolve(res[0]);
       } else {

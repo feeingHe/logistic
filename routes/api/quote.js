@@ -12,6 +12,7 @@ const service = require('../../services/quoteService');
 router.post('/addQuote', service.addQuote);
 router.post('/deleteQuote', service.deleteQuote);
 router.post('/modifyQuote', service.modifyQuote);
+router.post('/queryQuote', service.queryQuote);
 
 
 module.exports = router;

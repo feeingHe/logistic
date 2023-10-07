@@ -75,8 +75,9 @@ function validRequest(req, res, next) {
     return new Promise((resolve, reject) => {
         const err = validationResult(req);
         const requestId = req.get('X-requestId');
-        console.log('-----requestId:', requestId, voidXsrfStacks)
-        if (voidXsrfStacks.includes(requestId)) {
+        const requestUrl = req.originalUrl;
+        const requestMsg = requestId + ':' + requestUrl;
+        if (voidXsrfStacks.includes(requestMsg)) {
             const msg = 'XSRF intercept';
             res.status(406).json({
                 code: CODE_ERROR,
@@ -86,7 +87,7 @@ function validRequest(req, res, next) {
             next(boom.badRequest(msg));
             reject(msg);
         } else {
-            voidXsrfStacks.push(requestId);
+            voidXsrfStacks.push(requestMsg);
         }
         // 如果验证错误，empty不为空
         if (!err.isEmpty()) {
@@ -121,9 +122,50 @@ function getNewTokenByRefreshToken(req, res) {
         returnToken({ user, successMsg: "get token success", res });
     }
 }
+const returnQuerySql = (dbName,fields = [], page_num, page_size) => {
+    const sqlStart = `SELECT *
+    FROM ${dbName}
+    WHERE `;
+    let sqlMain = ``;
+    let otherSql = ``;
+    const hasQuot = ['string'];
+    const otherParams = []
+    fields.forEach(field => {
+      const { key, val, type } = field;
+      if (type === 'array') {
+        otherParams.push({ key, val, type });
+        return;
+      }
+      if (val !== undefined) {
+        if (sqlMain) {
+          sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+        } else {
+          sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+        }
+      }
+    });
+  
+    otherParams.forEach(field => {
+      const { key, val } = field; 
+      if (sqlMain) {
+        otherSql += ` AND ` + key + ` IN (${val.map(v => {
+          if (typeof v === 'string') return `"${v}"`;
+          return v;
+        }).join(',')}) `;
+      }else{
+        otherSql += key + ` IN (${val.map(v => {
+          if (typeof v === 'string') return `"${v}"`;
+          return v;
+        }).join(',')}) `;
+      }
+    })
+  
+    return (sqlStart + sqlMain + otherSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g,' ');
+  }
 
 module.exports = {
     getToken,
     getNewTokenByRefreshToken,
-    validRequest
+    validRequest,
+    returnQuerySql
 }
