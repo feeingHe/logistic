@@ -12,10 +12,15 @@ const app = express();
 const path = require('path'); // 引入path模块
 const port = process.env.PORT || 9188; // 端口
 
+const compression = require('compression');
+
 // 设置模板引擎
-app.set('view engine', 'ejs');
+var ejs = require('ejs');
+app.engine('html', ejs.__express);
+app.set('view engine', 'html');
 app.set('views', path.join(__dirname, 'views'));
 
+app.use(compression()); // 解析json数据格式
 app.use(bodyParser.json()); // 解析json数据格式
 app.use(bodyParser.urlencoded({ extended: true })); // 解析form表单提交的数据application/x-www-form-urlencoded
 

@@ -99,7 +99,7 @@ function register(req, res, next) {
         })
       })
   }).catch((err)=>{
-    console.log('add error:' + err.message)
+    console.log('register error:' + err.message)
   })
 }
 
@@ -157,7 +157,7 @@ function resetPwd(req, res, next) {
         }
       })
   }).catch((err)=>{
-    console.log('add error:' + err.message)
+    console.log('resetPwd error:' + err.message)
   })
 }
 

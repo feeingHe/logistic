@@ -72,7 +72,7 @@ const returnSql = (fields = []) => {
 // add Enquiry
 function addEnquiry(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, extend } = req.body;
+    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, is_create_confirmed = 0, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ dest, customer, ready_date, transit_time_require });
     if (errorFields && errorFields.length) {
@@ -132,6 +132,7 @@ function addEnquiry(req, res, next) {
         { key: 'selling_price', type: 'number', val: selling_price },
         { key: 'require_pickup', type: 'number', val: require_pickup },
         { key: 'action_type', type: 'string', val: 'added' },
+        { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
         { key: 'extend', type: 'string', val: extend }
       ];
       const addSql = returnSql(fields);
@@ -234,6 +235,7 @@ function deleteEnquiry(req, res, next) {
                 { key: 'require_pickup', type: 'number', val: data.require_pickup },
                 { key: 'console_id', type: 'string', val: data.console_id },
                 { key: 'action_type', type: 'string', val: 'deleted' },
+                { key: 'is_create_confirmed', type: 'number', val: data.is_create_confirmed },
                 { key: 'extend', type: 'string', val: data.extend }
               ];
               const insertSql = returnSql(fields);
@@ -352,6 +354,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'require_pickup', type: 'number', val: assginedData.require_pickup },
               { key: 'console_id', type: 'string', val: assginedData.console_id },
               { key: 'action_type', type: 'string', val: 'modified' },
+              { key: 'is_create_confirmed', type: 'number', val: assginedData.is_create_confirmed },
               { key: 'extend', type: 'string', val: assginedData.extend }
             ];
             const insertSql = returnSql(fields);
@@ -403,20 +406,21 @@ function modifyEnquiry(req, res, next) {
 // Enquiry query
 function queryEnquiry(req, res, next) {
   validRequest(req, res, next).then(() => {
-    let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, page_num = 1, page_size = 10 } = req.body;
+    let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, is_create_confirmed, page_num = 1, page_size = 10 } = req.body;
     const fields = [
       { key: 'id', type: 'string', val: id },
       { key: 'unique_id', type: 'string', val: unique_id },
       { key: 'parent_id', type: 'string', val: parent_id },
 
-      { key: 'status', type: 'array', val: status === undefined ? [status] : [1,2,3] },
+      { key: 'status', type: 'array', val: status === undefined ? [status] : [1, 2, 3] },
       { key: 'saler', type: 'string', val: saler },
       { key: 'customer', type: 'string', val: customer },
       { key: 'dest', type: 'string', val: dest },
       { key: 'flight', type: 'string', val: flight },
-      { key: 'transit_time_require', type: 'number', val: transit_time_require }
+      { key: 'transit_time_require', type: 'number', val: transit_time_require },
+      { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
     ];
-    const sql = returnQuerySql('booking_manage',fields, page_num, page_size);
+    const sql = returnQuerySql('booking_manage', fields, page_num, page_size);
 
     querySql(sql)
       .then((data) => {

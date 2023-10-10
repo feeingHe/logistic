@@ -178,11 +178,22 @@ function deleteConsole(req, res, next) {
                 if (!data || data.length === 0) {
                   throw new Error('delete error');
                 } else {
-                  res.json({
-                    code: CODE_SUCCESS,
-                    msg: 'delete data success',
-                    data: null
-                  });
+                  const updateBookingSql = `UPDATE booking_manage SET status = 2 WHERE console_id = '${data.unique_id}' AND status = 3`;
+                  querySql(updateBookingSql).then(() => {
+                    res.json({
+                      code: CODE_SUCCESS,
+                      msg: 'delete data success',
+                      data: null
+                    });
+                  }).catch(err=>{
+                    res.json({
+                      code: CODE_ERROR,
+                      msg: 'delete data error when update booking status:' + err.message,
+                      data: null
+                    })
+                    console.log(err)
+                  })
+                 
                 }
               }).catch((err) => {
                 res.json({
@@ -190,7 +201,7 @@ function deleteConsole(req, res, next) {
                   msg: 'delete data error',
                   data: null
                 })
-                console.log(err)
+                console.log('delete data error',err)
               })
             }
           })
@@ -326,8 +337,7 @@ function queryConsole(req, res, next) {
       { key: 'dest', type: 'string', val: dest },
       { key: 'creator', type: 'string', val: creator },
     ];
-    const sql = returnQuerySql('console_manage',fields, page_num, page_size);
-    console.log('--------querySql:', sql);
+    const sql = returnQuerySql('console_manage', fields, page_num, page_size);
 
     querySql(sql)
       .then(data => {

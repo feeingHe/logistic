@@ -75,6 +75,8 @@ function validRequest(req, res, next) {
     return new Promise((resolve, reject) => {
         const err = validationResult(req);
         const requestId = req.get('X-requestId');
+        console.log('--------------------------');
+        console.log('requestId:',requestId);
         const requestUrl = req.originalUrl;
         const requestMsg = requestId + ':' + requestUrl;
         if (voidXsrfStacks.includes(requestMsg)) {
@@ -84,7 +86,7 @@ function validRequest(req, res, next) {
                 msg,
                 data: null
             })
-            next(boom.badRequest(msg));
+            // next(boom.badRequest(msg));
             reject(msg);
         } else {
             voidXsrfStacks.push(requestMsg);
