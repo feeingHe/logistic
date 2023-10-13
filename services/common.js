@@ -10,6 +10,8 @@ const {
     PRIVATE_KEY,
     JWT_EXPIRED
 } = require('../utils/constant');
+const moment = require('moment');
+
 
 
 // return new token struct
@@ -46,6 +48,7 @@ const returnToken = function ({ user, successMsg, res }) {
         }
     })
 }
+
 // select * from logistic.user_manage where account='1111';
 // select * from logistic.user_manage where account=1111 and password='a5636918d403c89a6f31b67ab97d0a2a';
 // INSERT * from logistic.user_manage where account=1111 and password='a5636918d403c89a6f31b67ab97d0a2a';
@@ -76,7 +79,8 @@ function validRequest(req, res, next) {
         const err = validationResult(req);
         const requestId = req.get('X-requestId');
         console.log('--------------------------');
-        console.log('requestId:',requestId);
+        console.table({ 'requestId': requestId, 'requestTime': moment().format('YYYY-MM-DD HH:mm:ss') });
+
         const requestUrl = req.originalUrl;
         const requestMsg = requestId + ':' + requestUrl;
         if (voidXsrfStacks.includes(requestMsg)) {
@@ -101,6 +105,7 @@ function validRequest(req, res, next) {
         } else {
             try {
                 const { username } = decode(req);
+                console.log('username:', username);
                 resolve({ username });
             } catch (error) {
                 resolve({});
@@ -120,11 +125,11 @@ function getNewTokenByRefreshToken(req, res) {
             data: null
         })
     } else {
-        const { user } = decode(refreshToken)
-        returnToken({ user, successMsg: "get token success", res });
+        const { user } = decode(req, refreshToken)
+        returnToken({ user: [user], successMsg: "get token success", res });
     }
 }
-const returnQuerySql = (dbName,fields = [], page_num, page_size) => {
+const returnQuerySql = (dbName, fields = [], page_num, page_size) => {
     const sqlStart = `SELECT *
     FROM ${dbName}
     WHERE `;
@@ -133,37 +138,46 @@ const returnQuerySql = (dbName,fields = [], page_num, page_size) => {
     const hasQuot = ['string'];
     const otherParams = []
     fields.forEach(field => {
-      const { key, val, type } = field;
-      if (type === 'array') {
-        otherParams.push({ key, val, type });
-        return;
-      }
-      if (val !== undefined) {
-        if (sqlMain) {
-          sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
-        } else {
-          sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+        const { key, val, type, isLike } = field;
+        if (type === 'array') {
+            otherParams.push({ key, val, type });
+            return;
         }
-      }
+        if (val !== undefined) {
+            if (sqlMain) {
+                if (isLike) {
+                    sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" :  "%" + val + "%");
+                } else {
+                    sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+                }
+
+            } else {
+                if (isLike) {
+                    sqlMain += key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
+                } else {
+                    sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+                }
+            }
+        }
     });
-  
+
     otherParams.forEach(field => {
-      const { key, val } = field; 
-      if (sqlMain) {
-        otherSql += ` AND ` + key + ` IN (${val.map(v => {
-          if (typeof v === 'string') return `"${v}"`;
-          return v;
-        }).join(',')}) `;
-      }else{
-        otherSql += key + ` IN (${val.map(v => {
-          if (typeof v === 'string') return `"${v}"`;
-          return v;
-        }).join(',')}) `;
-      }
+        const { key, val } = field;
+        if (sqlMain) {
+            otherSql += ` AND ` + key + ` IN (${val.map(v => {
+                if (typeof v === 'string') return `"${v}"`;
+                return v;
+            }).join(',')}) `;
+        } else {
+            otherSql += key + ` IN (${val.map(v => {
+                if (typeof v === 'string') return `"${v}"`;
+                return v;
+            }).join(',')}) `;
+        }
     })
-  
-    return (sqlStart + sqlMain + otherSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g,' ');
-  }
+
+    return (sqlStart + sqlMain + otherSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
+}
 
 module.exports = {
     getToken,

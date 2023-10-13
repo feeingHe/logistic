@@ -39,7 +39,7 @@ function menuListQuery(req, res, next) {
   validRequest(req,res, next).then(() => {
     // const token = req.get('Authorization')
     const {permission} = decode(req);
-    const query = `select * from menu_manage where status = 1 and visible_permission >= ${permission}`;
+    const query = `select * from menu_manage where status = 1 and visible_permission >= ${permission || 10}`;
     querySql(query).then((data) => {
       if (data && data.length) {
         res.json({
@@ -56,7 +56,7 @@ function menuListQuery(req, res, next) {
       }
     })
   }).catch((err)=>{
-    console.log('add error:' + err.message)
+    console.log('menuListQuery error:' + err.message)
   })
 }
 

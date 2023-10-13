@@ -72,7 +72,7 @@ const returnSql = (fields = []) => {
 // add Enquiry
 function addEnquiry(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, is_create_confirmed = 0, extend } = req.body;
+    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price,selling_price_text, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, is_create_confirmed = 0, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ dest, customer, ready_date, transit_time_require });
     if (errorFields && errorFields.length) {
@@ -110,7 +110,7 @@ function addEnquiry(req, res, next) {
         { key: 'create_time', type: 'string', val: timestamp },
         { key: 'creator', type: 'string', val: username },
         { key: 'status', type: 'number', val: status },
-        { key: 'ready_date', type: 'string', val: ready_date },
+        { key: 'ready_date', type: 'string', val: moment(ready_date).format('YYYY-MM-DD HH:mm:ss') },
         { key: 'transit_time_require', type: 'string', val: transit_time_require },
 
         // estimate
@@ -130,6 +130,7 @@ function addEnquiry(req, res, next) {
         { key: 'flight', type: 'string', val: flight },
         { key: 'special_remark', type: 'string', val: special_remark },
         { key: 'selling_price', type: 'number', val: selling_price },
+        { key: 'selling_price_text', type: 'string', val: selling_price_text },
         { key: 'require_pickup', type: 'number', val: require_pickup },
         { key: 'action_type', type: 'string', val: 'added' },
         { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
@@ -194,7 +195,7 @@ function deleteEnquiry(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE booking_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE booking_manage SET status=101 WHERE id = '${id}';`;
 
         querySql(deleteSql)
           .then(queryData => {
@@ -232,6 +233,7 @@ function deleteEnquiry(req, res, next) {
                 { key: 'flight', type: 'string', val: data.flight },
                 { key: 'special_remark', type: 'string', val: data.special_remark },
                 { key: 'selling_price', type: 'number', val: data.selling_price },
+                { key: 'selling_price_text', type: 'string', val: data.selling_price_text },
                 { key: 'require_pickup', type: 'number', val: data.require_pickup },
                 { key: 'console_id', type: 'string', val: data.console_id },
                 { key: 'action_type', type: 'string', val: 'deleted' },
@@ -313,7 +315,7 @@ function modifyEnquiry(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE booking_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE booking_manage SET status=102 WHERE id = '${id}';`;
 
         querySql(deleteSql).then((queryData) => {
           if (!queryData || queryData.length === 0) {
@@ -351,6 +353,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'flight', type: 'string', val: assginedData.flight },
               { key: 'special_remark', type: 'string', val: assginedData.special_remark },
               { key: 'selling_price', type: 'number', val: assginedData.selling_price },
+              { key: 'selling_price_text', type: 'string', val: assginedData.selling_price_text },
               { key: 'require_pickup', type: 'number', val: assginedData.require_pickup },
               { key: 'console_id', type: 'string', val: assginedData.console_id },
               { key: 'action_type', type: 'string', val: 'modified' },
@@ -408,15 +411,15 @@ function queryEnquiry(req, res, next) {
   validRequest(req, res, next).then(() => {
     let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, is_create_confirmed, page_num = 1, page_size = 10 } = req.body;
     const fields = [
-      { key: 'id', type: 'string', val: id },
-      { key: 'unique_id', type: 'string', val: unique_id },
+      { key: 'id', type: 'string', val: id, isLike: true },
+      { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
       { key: 'parent_id', type: 'string', val: parent_id },
 
-      { key: 'status', type: 'array', val: status === undefined ? [status] : [1, 2, 3] },
-      { key: 'saler', type: 'string', val: saler },
-      { key: 'customer', type: 'string', val: customer },
-      { key: 'dest', type: 'string', val: dest },
-      { key: 'flight', type: 'string', val: flight },
+      { key: 'status', type: 'array', val: status !== undefined ? status : [1, 2, 3] },
+      { key: 'saler', type: 'string', val: saler, isLike: true },
+      { key: 'customer', type: 'string', val: customer, isLike: true },
+      { key: 'dest', type: 'string', val: dest, isLike: true },
+      { key: 'flight', type: 'string', val: flight, isLike: true },
       { key: 'transit_time_require', type: 'number', val: transit_time_require },
       { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
     ];
@@ -432,19 +435,19 @@ function queryEnquiry(req, res, next) {
           //   data: data
           // })
           // return;
-          const quoteIds = data.map(d => d.unique_id).filter(Boolean) || [];
-          if (quoteIds.length) {
-            const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${quoteIds.map(id => {
+          const orderUniqueIds = data.map(d => d.unique_id).filter(Boolean) || [];
+          if (orderUniqueIds.length) {
+            const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${orderUniqueIds.map(id => {
               if (typeof id === 'string') return `"${id}"`;
               return id;
-            }).join(',')}) AND status != 0;`;
+            }).join(',')}) AND status NOT IN (0,101,102);`;
             querySql(queryQuotesSql).then((quotesList) => {
               res.json({
                 code: CODE_SUCCESS,
                 msg: 'query data success',
                 data: data.map(d => {
                   const { unique_id } = d;
-                  const underQuotes = quotesList.find(list => list.order_unique_id === unique_id);
+                  const underQuotes = quotesList.filter(list => list.order_unique_id === unique_id);
                   return Object.assign({}, d, { quotes: underQuotes || [] })
                 })
               })

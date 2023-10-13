@@ -24,6 +24,7 @@ function querySql(sql) {
   const conn = connect();
   return new Promise((resolve, reject) => {
     try {
+      console.log('--sql:',sql)
       conn.query(sql, (err, res) => {
         if (err) {
           reject(err);

@@ -36,10 +36,10 @@ const jwtAuth = expressJwt({
 })
 
 // jwt-token解析
-function decode(req) {
-  const token = req.get('Authorization');
+function decode(req,token) {
+  const authorization = token || req.get('Authorization');
   // console.log('---token:', token)
-  return jwt.verify(token, PRIVATE_KEY);
+  return jwt.verify(authorization, PRIVATE_KEY);
 }
 
 module.exports = {

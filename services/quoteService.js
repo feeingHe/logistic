@@ -22,7 +22,7 @@ function findData(id) {
 }
 // SELECT * FROM logistic.quotes_manage WHERE id='b6rtlh7czwxgdpofa2q439';
 /**
- *  fetch("http://127.0.0.1:9188/api/addQuote",{
+ *  fetch("http://logistic.com/api/addQuote",{
     method:'post',
      body:JSON.stringify({
     "order_unique_id":'xaxsa',
@@ -64,7 +64,7 @@ function addQuote(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
     let { order_unique_id, selling_price, flight, saler, status = 1, remark, extend } = req.body;
     // check required fields
-    const errorFields = checkRequiredField({ order_unique_id, selling_price, flight, saler });
+    const errorFields = checkRequiredField({ order_unique_id });
     if (errorFields && errorFields.length) {
       res.json({
         code: CODE_ERROR,
@@ -82,9 +82,9 @@ function addQuote(req, res, next) {
       return;
     }
     const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
-
+    const insertDataId = getUuid(32);
     const fields = [
-      { key: 'id', type: 'string', val: getUuid(32) },
+      { key: 'id', type: 'string', val: insertDataId},
       { key: 'unique_id', type: 'string', val: getUuid(32) },
       { key: 'parent_id', type: 'string', val: -1 },
       { key: 'order_unique_id', type: 'string', val: order_unique_id },
@@ -111,11 +111,20 @@ function addQuote(req, res, next) {
             data: null
           })
         } else {
-          res.json({
-            code: CODE_SUCCESS,
-            msg: 'insert data success',
-            data: null
+          findData(insertDataId).then(result=>{
+            res.json({
+              code: CODE_SUCCESS,
+              msg: 'insert data success',
+              data: result
+            })
+          }).catch(err =>{
+            res.json({
+              code: CODE_ERROR,
+              msg: 'insert data error: ' + err.message,
+              data: null
+            })
           })
+          
         }
       }).catch(err => {
         res.json({
@@ -154,7 +163,7 @@ function deleteQuote(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE quotes_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE quotes_manage SET status=101 WHERE id = '${id}';`;
 
         querySql(deleteSql)
           .then(queryData => {
@@ -254,7 +263,7 @@ function modifyQuote(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE quotes_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE quotes_manage SET status=102 WHERE unique_id = '${data.unique_id }';`;
 
         querySql(deleteSql).then((queryData) => {
           if (!queryData || queryData.length === 0) {
@@ -336,7 +345,7 @@ function queryQuote(req, res, next) {
       { key: 'flight', type: 'string', val: flight },
       { key: 'saler', type: 'string', val: saler },
       { key: 'creator', type: 'string', val: creator },
-      { key: 'status', type: 'array', val: status === undefined ? [status] : [1,2] }
+      { key: 'status', type: 'array', val: status !== undefined ? status : [1,2] }
     ];
 
     const sql = returnQuerySql('quotes_manage',fields, page_num, page_size);

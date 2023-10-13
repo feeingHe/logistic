@@ -6,11 +6,11 @@
 
 const express = require('express');
 const router = express.Router();
-const service = require('../../services/menuService');
+const service = require('../../services/loggerService');
 
 
-// menu 菜单接口
-router.post('/getMenuList', service.menuListQuery);
+// log接口
+router.post('/getLog', service.queryLog);
 
 
 module.exports = router;

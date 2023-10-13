@@ -148,7 +148,7 @@ function deleteConsole(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE console_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE console_manage SET status=101 WHERE id = '${id}';`;
 
         querySql(deleteSql)
           .then(queryData => {
@@ -185,7 +185,7 @@ function deleteConsole(req, res, next) {
                       msg: 'delete data success',
                       data: null
                     });
-                  }).catch(err=>{
+                  }).catch(err => {
                     res.json({
                       code: CODE_ERROR,
                       msg: 'delete data error when update booking status:' + err.message,
@@ -193,7 +193,7 @@ function deleteConsole(req, res, next) {
                     })
                     console.log(err)
                   })
-                 
+
                 }
               }).catch((err) => {
                 res.json({
@@ -201,7 +201,7 @@ function deleteConsole(req, res, next) {
                   msg: 'delete data error',
                   data: null
                 })
-                console.log('delete data error',err)
+                console.log('delete data error', err)
               })
             }
           })
@@ -257,7 +257,7 @@ function modifyConsole(req, res, next) {
           data: null
         })
       } else {
-        const deleteSql = `UPDATE console_manage SET status=0 WHERE id = '${id}';`;
+        const deleteSql = `UPDATE console_manage SET status=102 WHERE id = '${id}';`;
 
         querySql(deleteSql).then((queryData) => {
           if (!queryData || queryData.length === 0) {
@@ -328,14 +328,14 @@ function queryConsole(req, res, next) {
   validRequest(req, res, next).then(() => {
     let { id, unique_id, parent_id, status, flight, dest, name, creator, page_num = 1, page_size = 10 } = req.body;
     const fields = [
-      { key: 'id', type: 'string', val: id },
-      { key: 'unique_id', type: 'string', val: unique_id },
+      { key: 'id', type: 'string', val: id, isLike: true },
+      { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
       { key: 'parent_id', type: 'string', val: parent_id },
-      { key: 'status', type: 'array', val: status === undefined ? [status] : [1, 2] },
-      { key: 'name', type: 'string', val: name },
-      { key: 'flight', type: 'string', val: flight },
-      { key: 'dest', type: 'string', val: dest },
-      { key: 'creator', type: 'string', val: creator },
+      { key: 'status', type: 'array', val: status !== undefined ? status : [1, 2] },
+      { key: 'name', type: 'string', val: name, isLike: true },
+      { key: 'flight', type: 'string', val: flight, isLike: true },
+      { key: 'dest', type: 'string', val: dest, isLike: true },
+      { key: 'creator', type: 'string', val: creator, isLike: true },
     ];
     const sql = returnQuerySql('console_manage', fields, page_num, page_size);
 
@@ -348,7 +348,7 @@ function queryConsole(req, res, next) {
           const queryOrdersSql = `SELECT * from booking_manage WHERE console_id in (${consoleUniqueIds.map(id => {
             if (typeof id === 'string') return `"${id}"`;
             return id;
-          }).join(',')}) AND status != 0;`;
+          }).join(',')}) AND status NOT IN  (0,101,102);`;
           console.log('-----start,', queryOrdersSql, consoleUniqueIds)
           querySql(queryOrdersSql).then((ordersList) => {
             res.json({
@@ -356,7 +356,7 @@ function queryConsole(req, res, next) {
               msg: 'query data success',
               data: data.map(d => {
                 const { unique_id } = d;
-                const underConsoles = ordersList.find(order => order.console_id === unique_id);
+                const underConsoles = ordersList.filter(order => order.console_id === unique_id);
                 return Object.assign({}, d, { orders: underConsoles || [] })
               })
             })
