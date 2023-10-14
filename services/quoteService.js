@@ -184,6 +184,7 @@ function deleteQuote(req, res, next) {
                 { key: 'create_time', type: 'string', val: timestamp },
                 { key: 'creator', type: 'string', val: username },
                 { key: 'status', type: 'number', val: 0 },
+                { key: 'parent_status', type: 'number', val: data.status },
                 { key: 'remark', type: 'string', val: data.remark },
                 { key: 'action_type', type: 'string', val: 'deleted' },
                 { key: 'extend', type: 'string', val: data.extend }
@@ -282,6 +283,7 @@ function modifyQuote(req, res, next) {
               { key: 'create_time', type: 'string', val: timestamp },
               { key: 'creator', type: 'string', val: username },
               { key: 'status', type: 'number', val: assginedData.status },
+              { key: 'parent_status', type: 'number', val: data.status },
               { key: 'remark', type: 'string', val: assginedData.remark },
               { key: 'action_type', type: 'string', val: 'modified' },
               { key: 'extend', type: 'string', val: assginedData.extend }

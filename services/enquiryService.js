@@ -213,6 +213,7 @@ function deleteEnquiry(req, res, next) {
                 { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'creator', type: 'string', val: username },
                 { key: 'status', type: 'number', val: 0 },
+                { key: 'parent_status', type: 'number', val: data.status },
                 { key: 'ready_date', type: 'string', val: moment(data.ready_date).format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'transit_time_require', type: 'string', val: data.transit_time_require },
 
@@ -333,6 +334,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
               { key: 'creator', type: 'string', val: username || 'feeny' },
               { key: 'status', type: 'number', val: assginedData.status },
+              { key: 'parent_status', type: 'number', val: data.status },
               { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },
               { key: 'transit_time_require', type: 'string', val: assginedData.transit_time_require },
 
