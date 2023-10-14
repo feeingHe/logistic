@@ -129,7 +129,7 @@ function getNewTokenByRefreshToken(req, res) {
         returnToken({ user: [user], successMsg: "get token success", res });
     }
 }
-const returnQuerySql = (dbName, fields = [], page_num, page_size) => {
+const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     const sqlStart = `SELECT *
     FROM ${dbName}
     WHERE `;
@@ -138,15 +138,15 @@ const returnQuerySql = (dbName, fields = [], page_num, page_size) => {
     const hasQuot = ['string'];
     const otherParams = []
     fields.forEach(field => {
-        const { key, val, type, isLike } = field;
+        const { key, val, type, isLike, isNot } = field;
         if (type === 'array') {
-            otherParams.push({ key, val, type });
+            otherParams.push({ key, val, type, isNot });
             return;
         }
         if (val !== undefined) {
             if (sqlMain) {
                 if (isLike) {
-                    sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" :  "%" + val + "%");
+                    sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
                 } else {
                     sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
                 }
@@ -162,14 +162,14 @@ const returnQuerySql = (dbName, fields = [], page_num, page_size) => {
     });
 
     otherParams.forEach(field => {
-        const { key, val } = field;
+        const { key, val, isNot } = field;
         if (sqlMain) {
-            otherSql += ` AND ` + key + ` IN (${val.map(v => {
+            otherSql += ` AND ` + key + `${isNot ? ' NOT ' : ""} IN (${val.map(v => {
                 if (typeof v === 'string') return `"${v}"`;
                 return v;
             }).join(',')}) `;
         } else {
-            otherSql += key + ` IN (${val.map(v => {
+            otherSql += key + `${isNot ? ' NOT ' : ""}  IN (${val.map(v => {
                 if (typeof v === 'string') return `"${v}"`;
                 return v;
             }).join(',')}) `;
@@ -179,9 +179,60 @@ const returnQuerySql = (dbName, fields = [], page_num, page_size) => {
     return (sqlStart + sqlMain + otherSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
 }
 
+const returnQueryTotalSql = (dbName, fields = []) => {
+    const sqlStart = `SELECT COUNT(*) 
+    FROM ${dbName}
+    WHERE `;
+    let sqlMain = ``;
+    let otherSql = ``;
+    const hasQuot = ['string'];
+    const otherParams = []
+    fields.forEach(field => {
+        const { key, val, type, isLike, isNot } = field;
+        if (type === 'array') {
+            otherParams.push({ key, val, type, isNot });
+            return;
+        }
+        if (val !== undefined) {
+            if (sqlMain) {
+                if (isLike) {
+                    sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
+                } else {
+                    sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+                }
+
+            } else {
+                if (isLike) {
+                    sqlMain += key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
+                } else {
+                    sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+                }
+            }
+        }
+    });
+
+    otherParams.forEach(field => {
+        const { key, val, isNot } = field;
+        if (sqlMain) {
+            otherSql += ` AND ` + key + `${isNot ? ' NOT ' : ""} IN (${val.map(v => {
+                if (typeof v === 'string') return `"${v}"`;
+                return v;
+            }).join(',')}) `;
+        } else {
+            otherSql += key + `${isNot ? ' NOT ' : ""}  IN (${val.map(v => {
+                if (typeof v === 'string') return `"${v}"`;
+                return v;
+            }).join(',')}) `;
+        }
+    })
+
+    return (sqlStart + sqlMain + otherSql + `;`).replace(/\n|\s+/g, ' ');
+}
+
 module.exports = {
     getToken,
     getNewTokenByRefreshToken,
     validRequest,
-    returnQuerySql
+    returnQuerySql,
+    returnQueryTotalSql
 }

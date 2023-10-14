@@ -59,7 +59,7 @@ const returnSql = (fields = []) => {
 // add Console
 function addConsole(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { name, flight, dest, status = 1, extend } = req.body;
+    let { name, flight, airline, dest, status = 1, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ name, flight, dest });
     if (errorFields && errorFields.length) {
@@ -81,11 +81,12 @@ function addConsole(req, res, next) {
     const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
 
     const fields = [
-      { key: 'id', type: 'string', val: 'console_' + getUuid(12) },
-      { key: 'unique_id', type: 'string', val: 'console_' + getUuid(12) },
+      { key: 'id', type: 'string', val: getUuid(32) },
+      { key: 'unique_id', type: 'string', val: 'console_' + getUuid(18) },
       { key: 'parent_id', type: 'string', val: -1 },
       { key: 'name', type: 'string', val: name },
       { key: 'flight', type: 'string', val: flight },
+      { key: 'airline', type: 'string', val: airline },
       { key: 'dest', type: 'string', val: dest },
       { key: 'create_time', type: 'string', val: timestamp },
       { key: 'creator', type: 'string', val: username },
@@ -159,11 +160,12 @@ function deleteConsole(req, res, next) {
               const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
 
               const fields = [
-                { key: 'id', type: 'string', val: 'console_' + getUuid(12) },
+                { key: 'id', type: 'string', val: getUuid(32) },
                 { key: 'unique_id', type: 'string', val: data.unique_id },
                 { key: 'parent_id', type: 'string', val: data.id },
                 { key: 'name', type: 'string', val: data.name },
                 { key: 'flight', type: 'string', val: data.flight },
+                { key: 'airline', type: 'string', val: data.airline },
                 { key: 'dest', type: 'string', val: data.dest },
                 { key: 'create_time', type: 'string', val: timestamp },
                 { key: 'creator', type: 'string', val: username },
@@ -266,11 +268,13 @@ function modifyConsole(req, res, next) {
             const assginedData = Object.assign({}, data, req.body, { unique_id: data.unique_id });
             const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
             const fields = [
-              { key: 'id', type: 'string', val: 'console_' + getUuid(12) },
+              { key: 'id', type: 'string', val: getUuid(32) },
               { key: 'unique_id', type: 'string', val: assginedData.unique_id },
               { key: 'parent_id', type: 'string', val: data.id },
               { key: 'name', type: 'string', val: assginedData.name },
               { key: 'flight', type: 'string', val: assginedData.flight },
+              { key: 'airline', type: 'string', val: assginedData.airline },
+
               { key: 'dest', type: 'string', val: assginedData.dest },
               { key: 'create_time', type: 'string', val: timestamp },
               { key: 'creator', type: 'string', val: username },
@@ -326,7 +330,7 @@ function modifyConsole(req, res, next) {
 // Console query
 function queryConsole(req, res, next) {
   validRequest(req, res, next).then(() => {
-    let { id, unique_id, parent_id, status, flight, dest, name, creator, page_num = 1, page_size = 10 } = req.body;
+    let { id, unique_id, parent_id, status, flight, airline, dest, name, creator, page_num = 1, page_size = 10 } = req.body;
     const fields = [
       { key: 'id', type: 'string', val: id, isLike: true },
       { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
@@ -334,6 +338,7 @@ function queryConsole(req, res, next) {
       { key: 'status', type: 'array', val: status !== undefined ? status : [1, 2] },
       { key: 'name', type: 'string', val: name, isLike: true },
       { key: 'flight', type: 'string', val: flight, isLike: true },
+      { key: 'airline', type: 'string', val: airline, isLike: true },
       { key: 'dest', type: 'string', val: dest, isLike: true },
       { key: 'creator', type: 'string', val: creator, isLike: true },
     ];
@@ -348,18 +353,31 @@ function queryConsole(req, res, next) {
           const queryOrdersSql = `SELECT * from booking_manage WHERE console_id in (${consoleUniqueIds.map(id => {
             if (typeof id === 'string') return `"${id}"`;
             return id;
-          }).join(',')}) AND status NOT IN  (0,101,102);`;
+          }).join(',')}) AND status = 3;`;
           console.log('-----start,', queryOrdersSql, consoleUniqueIds)
           querySql(queryOrdersSql).then((ordersList) => {
-            res.json({
-              code: CODE_SUCCESS,
-              msg: 'query data success',
-              data: data.map(d => {
-                const { unique_id } = d;
-                const underConsoles = ordersList.filter(order => order.console_id === unique_id);
-                return Object.assign({}, d, { orders: underConsoles || [] })
+            const totalSql = `SELECT COUNT(*) FROM console_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2'});`;
+            querySql(totalSql).then(total => {
+              res.json({
+                code: CODE_SUCCESS,
+                msg: 'query data success',
+                data: {
+                  total: +total[0]['COUNT(*)'],
+                  list: data.map(d => {
+                    const { unique_id } = d;
+                    const underConsoles = ordersList.filter(order => order.console_id === unique_id);
+                    return Object.assign({}, d, { orders: underConsoles || [] })
+                  })
+                }
+              })
+            }).catch((err) => {
+              res.json({
+                code: CODE_ERROR,
+                msg: 'error when query consoles total:' + err.message,
+                data: null
               })
             })
+
           }).catch(err => {
             res.json({
               code: CODE_ERROR,

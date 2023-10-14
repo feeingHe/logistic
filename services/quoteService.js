@@ -85,7 +85,7 @@ function addQuote(req, res, next) {
     const insertDataId = getUuid(32);
     const fields = [
       { key: 'id', type: 'string', val: insertDataId},
-      { key: 'unique_id', type: 'string', val: getUuid(32) },
+      { key: 'unique_id', type: 'string', val: 'quote_' + getUuid(18) },
       { key: 'parent_id', type: 'string', val: -1 },
       { key: 'order_unique_id', type: 'string', val: order_unique_id },
       { key: 'selling_price', type: 'number', val: selling_price },

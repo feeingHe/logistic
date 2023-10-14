@@ -11,6 +11,9 @@ const service = require('../../services/loggerService');
 
 // log接口
 router.post('/getLog', service.queryLog);
+router.post('/getLogCompare', service.queryLogCompare);
+
+
 
 
 module.exports = router;

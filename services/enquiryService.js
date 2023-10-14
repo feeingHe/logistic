@@ -72,7 +72,7 @@ const returnSql = (fields = []) => {
 // add Enquiry
 function addEnquiry(req, res, next) {
   validRequest(req, res, next).then(({ username }) => {
-    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price,selling_price_text, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, is_create_confirmed = 0, extend } = req.body;
+    let { dest, customer, saler, ready_date, transit_time_require, status = 1, mawb, flight, special_remark, selling_price, selling_price_text, require_pickup, quantity_estimate, gross_weight_estimate, cmb_estimate, vol_estimate, dim_estimate, quantity_actual, gross_weight_actual, cmb_actual, vol_actual, dim_actual, is_create_confirmed = 0, extend } = req.body;
     // check required fields
     const errorFields = checkRequiredField({ dest, customer, ready_date, transit_time_require });
     if (errorFields && errorFields.length) {
@@ -331,7 +331,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'saler', type: 'string', val: assginedData.saler },
               { key: 'customer', type: 'string', val: assginedData.customer },
               { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
-              { key: 'creator', type: 'string', val: username },
+              { key: 'creator', type: 'string', val: username || 'feeny' },
               { key: 'status', type: 'number', val: assginedData.status },
               { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },
               { key: 'transit_time_require', type: 'string', val: assginedData.transit_time_require },
@@ -442,15 +442,29 @@ function queryEnquiry(req, res, next) {
               return id;
             }).join(',')}) AND status NOT IN (0,101,102);`;
             querySql(queryQuotesSql).then((quotesList) => {
-              res.json({
-                code: CODE_SUCCESS,
-                msg: 'query data success',
-                data: data.map(d => {
-                  const { unique_id } = d;
-                  const underQuotes = quotesList.filter(list => list.order_unique_id === unique_id);
-                  return Object.assign({}, d, { quotes: underQuotes || [] })
+              const totalSql = `SELECT COUNT(*) FROM booking_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2 ,3'});`;
+              querySql(totalSql).then(total => {
+                res.json({
+                  code: CODE_SUCCESS,
+                  msg: 'query data success',
+                  data: {
+                    total: +total[0]['COUNT(*)'],
+                    list: data.map(d => {
+                      const { unique_id } = d;
+                      const underQuotes = quotesList.filter(list => list.order_unique_id === unique_id);
+                      return Object.assign({}, d, { quotes: underQuotes || [] })
+                    })
+                  }
                 })
+              }).catch(err => {
+                res.json({
+                  code: CODE_ERROR,
+                  msg: 'error when query total:' + err.message,
+                  data: null
+                })
+                console.log(err)
               })
+
             }).catch(err => {
               res.json({
                 code: CODE_ERROR,
