@@ -177,8 +177,8 @@ function deleteConsole(req, res, next) {
               const insertSql = returnSql(fields);
               console.log('...deleteConsole:', insertSql);
 
-              querySql(insertSql).then(data => {
-                if (!data || data.length === 0) {
+              querySql(insertSql).then(inserteDdata => {
+                if (!inserteDdata || inserteDdata.length === 0) {
                   throw new Error('delete error');
                 } else {
                   const updateBookingSql = `UPDATE booking_manage SET status = 2 WHERE console_id = '${data.unique_id}' AND status = 3`;
@@ -343,6 +343,7 @@ function queryConsole(req, res, next) {
       { key: 'airline', type: 'string', val: airline, isLike: true },
       { key: 'dest', type: 'string', val: dest, isLike: true },
       { key: 'creator', type: 'string', val: creator, isLike: true },
+      { key: 'create_time', type: 'sortIndex' },
     ];
     const sql = returnQuerySql('console_manage', fields, page_num, page_size);
 

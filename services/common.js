@@ -135,12 +135,19 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     WHERE `;
     let sqlMain = ``;
     let otherSql = ``;
+    let orderSql = ``;
     const hasQuot = ['string'];
-    const otherParams = []
+    const otherArrayParams = [];
+    const orders = [];
+
     fields.forEach(field => {
         const { key, val, type, isLike, isNot } = field;
         if (type === 'array') {
-            otherParams.push({ key, val, type, isNot });
+            otherArrayParams.push({ key, val, type, isNot });
+            return;
+        }
+        if(type === 'sortIndex') {
+            orders.push(key)
             return;
         }
         if (val !== undefined) {
@@ -161,7 +168,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
         }
     });
 
-    otherParams.forEach(field => {
+    otherArrayParams.forEach(field => {
         const { key, val, isNot } = field;
         if (sqlMain) {
             otherSql += ` AND ` + key + `${isNot ? ' NOT ' : ""} IN (${val.map(v => {
@@ -175,8 +182,11 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
             }).join(',')}) `;
         }
     })
+    if(orders && orders.length) {
+        orderSql = "ORDER BY " + orders.join(',') + " DESC "
+    }
 
-    return (sqlStart + sqlMain + otherSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
+    return (sqlStart + sqlMain + otherSql + orderSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
 }
 
 const returnQueryTotalSql = (dbName, fields = []) => {

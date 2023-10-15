@@ -424,6 +424,8 @@ function queryEnquiry(req, res, next) {
       { key: 'flight', type: 'string', val: flight, isLike: true },
       { key: 'transit_time_require', type: 'number', val: transit_time_require },
       { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
+      // { key: 'create_time', type: 'sortIndex' },
+      { key: 'unique_id', type: 'sortIndex' },
     ];
     const sql = returnQuerySql('booking_manage', fields, page_num, page_size);
 

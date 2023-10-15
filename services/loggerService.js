@@ -51,6 +51,7 @@ function queryLog(req, res, next) {
       { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
       { key: 'creator', type: 'string', val: operator, isLike: true },
       { key: 'status', type: 'array', val: [101, 102], isNot: true },
+      { key: 'create_time', type: 'sortIndex' },
     ];
 
     const dbMap = {
