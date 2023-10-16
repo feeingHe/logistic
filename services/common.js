@@ -78,10 +78,10 @@ function validRequest(req, res, next) {
     return new Promise((resolve, reject) => {
         const err = validationResult(req);
         const requestId = req.get('X-requestId');
-        console.log('--------------------------');
-        console.table({ 'requestId': requestId, 'requestTime': moment().format('YYYY-MM-DD HH:mm:ss') });
-
         const requestUrl = req.originalUrl;
+        console.log('-------------- NEW REQUEST ------------');
+        console.table({ 'requestId': requestId, 'requestTime': moment().format('YYYY-MM-DD HH:mm:ss'),requestUrl });
+
         const requestMsg = requestId + ':' + requestUrl;
         if (voidXsrfStacks.includes(requestMsg)) {
             const msg = 'XSRF intercept';
@@ -142,7 +142,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
 
     fields.forEach(field => {
         const { key, val, type, isLike, isNot } = field;
-        if (type === 'array') {
+        if (type === 'array' && val) {
             otherArrayParams.push({ key, val, type, isNot });
             return;
         }
@@ -170,13 +170,13 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
 
     otherArrayParams.forEach(field => {
         const { key, val, isNot } = field;
-        if (sqlMain) {
+        if (sqlMain || otherSql) {
             otherSql += ` AND ` + key + `${isNot ? ' NOT ' : ""} IN (${val.map(v => {
                 if (typeof v === 'string') return `"${v}"`;
                 return v;
             }).join(',')}) `;
         } else {
-            otherSql += key + `${isNot ? ' NOT ' : ""}  IN (${val.map(v => {
+            otherSql += key + `${isNot ? ' NOT ' : ""} IN (${val.map(v => {
                 if (typeof v === 'string') return `"${v}"`;
                 return v;
             }).join(',')}) `;

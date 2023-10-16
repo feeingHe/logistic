@@ -13,7 +13,7 @@ const {
   CODE_SUCCESS,
 } = require('../utils/constant');
 const moment = require('moment');
-
+const { queryEnquiry } = require('./enquiryService')
 
 // 通过任务名称或ID查询数据是否存在
 function findData(id) {
@@ -332,7 +332,7 @@ function modifyConsole(req, res, next) {
 // Console query
 function queryConsole(req, res, next) {
   validRequest(req, res, next).then(() => {
-    let { id, unique_id, parent_id, status, flight, airline, dest, name, creator, page_num = 1, page_size = 10 } = req.body;
+    let { id, unique_id, parent_id, status, flight, airline, dest, name, creator, sort_key_list = ['create_time'], orders_limit = 10000, page_num = 1, page_size = 10 } = req.body;
     const fields = [
       { key: 'id', type: 'string', val: id, isLike: true },
       { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
@@ -343,8 +343,15 @@ function queryConsole(req, res, next) {
       { key: 'airline', type: 'string', val: airline, isLike: true },
       { key: 'dest', type: 'string', val: dest, isLike: true },
       { key: 'creator', type: 'string', val: creator, isLike: true },
-      { key: 'create_time', type: 'sortIndex' },
     ];
+    if (sort_key_list instanceof Array) {
+      sort_key_list.forEach(key => {
+        fields.push({
+          key,
+          type: 'sortIndex'
+        })
+      })
+    }
     const sql = returnQuerySql('console_manage', fields, page_num, page_size);
 
     querySql(sql)
@@ -353,42 +360,41 @@ function queryConsole(req, res, next) {
         // -----查询关联表-------
         const consoleUniqueIds = data.map(d => d.unique_id).filter(Boolean) || [];
         if (consoleUniqueIds.length) {
-          const queryOrdersSql = `SELECT * from booking_manage WHERE console_id in (${consoleUniqueIds.map(id => {
-            if (typeof id === 'string') return `"${id}"`;
-            return id;
-          }).join(',')}) AND status = 3;`;
-          console.log('-----start,', queryOrdersSql, consoleUniqueIds)
-          querySql(queryOrdersSql).then((ordersList) => {
-            const totalSql = `SELECT COUNT(*) FROM console_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2'});`;
-            querySql(totalSql).then(total => {
-              res.json({
-                code: CODE_SUCCESS,
-                msg: 'query data success',
-                data: {
-                  total: +total[0]['COUNT(*)'],
-                  list: data.map(d => {
-                    const { unique_id } = d;
-                    const underConsoles = ordersList.filter(order => order.console_id === unique_id);
-                    return Object.assign({}, d, { orders: underConsoles || [] })
-                  })
-                }
+          // console.log('--req',req)
+          // to Query Orders
+          queryEnquiry(null, res, null, {
+            isResolve: true,
+            fields: [
+              { key: 'console_id', type: 'array', val: consoleUniqueIds },
+              { key: 'status', type: 'array', val: [3] },
+            ],
+            pageNum: 1,
+            pageSize: orders_limit,
+            callback(ordersList) {
+              const totalSql = `SELECT COUNT(*) FROM console_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2'});`;
+              querySql(totalSql).then(total => {
+                res.json({
+                  code: CODE_SUCCESS,
+                  msg: 'query data success',
+                  data: {
+                    total: +total[0]['COUNT(*)'],
+                    list: data.map(d => {
+                      const { unique_id } = d;
+                      const underConsoles = (ordersList || []).filter(order => order.console_id === unique_id);
+                      return Object.assign({}, d, { orders: underConsoles || [] })
+                    })
+                  }
+                })
+              }).catch((err) => {
+                res.json({
+                  code: CODE_ERROR,
+                  msg: 'error when query consoles total:' + err.message,
+                  data: null
+                })
               })
-            }).catch((err) => {
-              res.json({
-                code: CODE_ERROR,
-                msg: 'error when query consoles total:' + err.message,
-                data: null
-              })
-            })
-
-          }).catch(err => {
-            res.json({
-              code: CODE_ERROR,
-              msg: 'error when query sub consoles:' + err.message,
-              data: null
-            })
-            console.log('queryConsolesSql error:', err)
+            }
           })
+
         } else {
           res.json({
             code: CODE_SUCCESS,

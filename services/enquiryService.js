@@ -409,36 +409,53 @@ function modifyEnquiry(req, res, next) {
 }
 
 // Enquiry query
-function queryEnquiry(req, res, next) {
-  validRequest(req, res, next).then(() => {
-    let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, is_create_confirmed, page_num = 1, page_size = 10 } = req.body;
-    const fields = [
-      { key: 'id', type: 'string', val: id, isLike: true },
-      { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
-      { key: 'parent_id', type: 'string', val: parent_id },
+// queryParams : {fields:[];callback:()=>any;page_num:number;page_size:number;}
+function queryEnquiry(req, res, next, queryParams = {}) {
+  (queryParams.isResolve ? Promise.resolve() : validRequest(req, res, next)).then(() => {
+    const defaultStatus = [1, 2, 3];
+    let fields = [], pageNum = 1, pageSize = 10, orderStatus = defaultStatus;
+    if (queryParams.fields) {
+      fields = queryParams.fields;
+      pageNum = queryParams.page_number;
+      pageSize = queryParams.page_size;
+      orderStatus = (fields.find(f => f.key === 'status' && f.type === 'array') || {}).val || defaultStatus;
+    } else {
 
-      { key: 'status', type: 'array', val: status !== undefined ? status : [1, 2, 3] },
-      { key: 'saler', type: 'string', val: saler, isLike: true },
-      { key: 'customer', type: 'string', val: customer, isLike: true },
-      { key: 'dest', type: 'string', val: dest, isLike: true },
-      { key: 'flight', type: 'string', val: flight, isLike: true },
-      { key: 'transit_time_require', type: 'number', val: transit_time_require },
-      { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
-      // { key: 'create_time', type: 'sortIndex' },
-      { key: 'unique_id', type: 'sortIndex' },
-    ];
-    const sql = returnQuerySql('booking_manage', fields, page_num, page_size);
+      let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, is_create_confirmed, console_id, sort_key_list = ['unique_id'], page_num = 1, page_size = 10 } = req.body;
+      orderStatus = status !== undefined ? status : defaultStatus;
+      fields = [
+        { key: 'id', type: 'string', val: id, isLike: true },
+        { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
+        { key: 'parent_id', type: 'string', val: parent_id },
+
+        { key: 'status', type: 'array', val: orderStatus },
+        { key: 'saler', type: 'string', val: saler, isLike: true },
+        { key: 'customer', type: 'string', val: customer, isLike: true },
+        { key: 'dest', type: 'string', val: dest, isLike: true },
+        { key: 'flight', type: 'string', val: flight, isLike: true },
+        { key: 'transit_time_require', type: 'number', val: transit_time_require },
+        { key: 'is_create_confirmed', type: 'number', val: is_create_confirmed },
+        { key: 'console_id', type: 'array', val: console_id },
+      ];
+      pageNum = page_num;
+      pageSize = page_size;
+      if (sort_key_list instanceof Array) {
+        sort_key_list.forEach(key => {
+          fields.push({
+            key,
+            type: 'sortIndex'
+          })
+        })
+      }
+    }
+
+    const sql = returnQuerySql('booking_manage', fields, pageNum, pageSize);
 
     querySql(sql)
       .then((data) => {
         // console.log('删除任务===', data);
         if (data && data.length) {
-          // res.json({
-          //   code: CODE_SUCCESS,
-          //   msg: 'query data success',
-          //   data: data
-          // })
-          // return;
+
           const orderUniqueIds = data.map(d => d.unique_id).filter(Boolean) || [];
           if (orderUniqueIds.length) {
             const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${orderUniqueIds.map(id => {
@@ -446,19 +463,27 @@ function queryEnquiry(req, res, next) {
               return id;
             }).join(',')}) AND status NOT IN (0,101,102);`;
             querySql(queryQuotesSql).then((quotesList) => {
-              const totalSql = `SELECT COUNT(*) FROM booking_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2 ,3'});`;
+              const totalSql = `SELECT COUNT(*) FROM booking_manage WHERE status IN (${orderStatus.join(',')});`;
+
               querySql(totalSql).then(total => {
+                const result = {
+                  total: +total[0]['COUNT(*)'],
+                  list: data.map(d => {
+                    const { unique_id } = d;
+                    const underQuotes = quotesList.filter(list => list.order_unique_id === unique_id);
+                    return Object.assign({}, d, { quotes: underQuotes || [] })
+                  })
+                }
+                // queryParams.callback
+                if (typeof queryParams.callback === 'function') {
+                  queryParams.callback(result.list);
+                  // next();
+                  return;
+                }
                 res.json({
                   code: CODE_SUCCESS,
                   msg: 'query data success',
-                  data: {
-                    total: +total[0]['COUNT(*)'],
-                    list: data.map(d => {
-                      const { unique_id } = d;
-                      const underQuotes = quotesList.filter(list => list.order_unique_id === unique_id);
-                      return Object.assign({}, d, { quotes: underQuotes || [] })
-                    })
-                  }
+                  data: result
                 })
               }).catch(err => {
                 res.json({
@@ -478,6 +503,11 @@ function queryEnquiry(req, res, next) {
               console.log(err)
             })
           } else {
+            if (typeof queryParams.callback === 'function') {
+              queryParams.callback(data);
+              // next();
+              return;
+            }
             res.json({
               code: CODE_SUCCESS,
               msg: 'query data success',
@@ -486,6 +516,11 @@ function queryEnquiry(req, res, next) {
           }
 
         } else {
+          if (typeof queryParams.callback === 'function') {
+            queryParams.callback([]);
+            // next();
+            return;
+          }
           res.json({
             code: CODE_SUCCESS,
             msg: 'query data success',
@@ -503,7 +538,7 @@ function queryEnquiry(req, res, next) {
         console.log(err)
       })
   }).catch((err) => {
-    console.log('query error:' + err.message)
+    console.log('query orders error:' + err.message)
   })
 }
 

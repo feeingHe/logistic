@@ -37,7 +37,7 @@ const {
 // log query
 function queryLog(req, res, next) {
   validRequest(req, res, next).then(() => {
-    let { type, unique_id, operator, page_num = 1, page_size = 10 } = req.body;
+    let { type, unique_id, operator, sort_key_list = ['create_time'], page_num = 1, page_size = 10 } = req.body;
     const errorFields = checkRequiredField({ type });
     if (errorFields && errorFields.length) {
       res.json({
@@ -51,9 +51,15 @@ function queryLog(req, res, next) {
       { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
       { key: 'creator', type: 'string', val: operator, isLike: true },
       { key: 'status', type: 'array', val: [101, 102], isNot: true },
-      { key: 'create_time', type: 'sortIndex' },
     ];
-
+    if (sort_key_list instanceof Array) {
+      sort_key_list.forEach(key => {
+        fields.push({
+          key,
+          type: 'sortIndex'
+        })
+      })
+    }
     const dbMap = {
       console: 'console_manage',
       order: 'booking_manage',
@@ -142,7 +148,7 @@ function queryLogCompare(req, res, next) {
     querySql(currentSql)
       .then(data => {
         const parentId = data[0].parent_id;
-        console.log('---data parent_id',parentId)
+        console.log('---data parent_id', parentId)
         if (parentId !== '-1') {
           const prevSql = `SELECT * FROM ${dbName} WHERE id = '${parentId}'`
           // console.log('删除任务===', data);
