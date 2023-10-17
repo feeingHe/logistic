@@ -183,7 +183,7 @@ function resetPwd(req, res, next) {
   })
 }
 
-// 重置密码
+// 用户认证
 function toAuthenticate(req, res, next) {
   validRequest(req, res, next).then(() => {
     let { account, password } = req.body;
@@ -231,8 +231,8 @@ function toAuthenticate(req, res, next) {
 
 
 // 校验用户名和密码
-function validateUser(account, oldPassword) {
-  const query = `select id, account from user_manage where account='${account}' and password='${oldPassword}'`;
+function validateUser(account, password) {
+  const query = `select id, account from user_manage where account='${account}' and password='${password}'`;
   return queryOne(query);
 }
 
