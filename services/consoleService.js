@@ -79,51 +79,73 @@ function addConsole(req, res, next) {
       return;
     }
     const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+    const date = timestamp.split(' ')[0].replace(/-/g, '');
 
-    const fields = [
-      { key: 'id', type: 'string', val: getUuid(32) },
-      { key: 'unique_id', type: 'string', val: 'console_' + getUuid(18) },
-      { key: 'parent_id', type: 'string', val: -1 },
-      { key: 'name', type: 'string', val: name },
-      { key: 'flight', type: 'string', val: flight },
-      { key: 'airline', type: 'string', val: airline },
-      { key: 'dest', type: 'string', val: dest },
-      { key: 'create_time', type: 'string', val: timestamp },
-      { key: 'creator', type: 'string', val: username },
-      { key: 'status', type: 'number', val: status },
-      { key: 'action_type', type: 'string', val: 'added' },
-      { key: 'extend', type: 'string', val: extend }
-    ];
-    const addSql = returnSql(fields);
-    console.log('...addConsole:', addSql);
+    const queryUniqueIdSql = `SELECT * from console_manage WHERE unique_id LIKE '%CFS${date}%';`;
+    querySql(queryUniqueIdSql).then((todayDataList = []) => {
+      const uniqueIdStack = todayDataList.map(list => list.unique_id.replace(/-|CFS/g, '')).sort();
+      // unique_id no
+      const no = ("CFS" + date + '-' + ('000' + (+uniqueIdStack.slice(-1).slice(-3) + 1)).slice(-3) || ('CFS' + date + '-' + + "001"));
+      uniqueIdStack.push(no);
 
-    querySql(addSql)
-      .then(data => {
-        if (!data || data.length === 0) {
+      const fields = [
+        { key: 'id', type: 'string', val: getUuid(32) },
+        { key: 'unique_id', type: 'string', val: no },
+        { key: 'parent_id', type: 'string', val: -1 },
+        { key: 'name', type: 'string', val: name },
+        { key: 'flight', type: 'string', val: flight },
+        { key: 'airline', type: 'string', val: airline },
+        { key: 'dest', type: 'string', val: dest },
+        { key: 'create_time', type: 'string', val: timestamp },
+        { key: 'creator', type: 'string', val: username },
+        { key: 'status', type: 'number', val: status },
+        { key: 'action_type', type: 'string', val: 'added' },
+        { key: 'extend', type: 'string', val: extend }
+      ];
+      const addSql = returnSql(fields);
+      console.log('...addConsole:', addSql);
+
+      querySql(addSql)
+        .then(data => {
+          if (!data || data.length === 0) {
+            res.json({
+              code: CODE_ERROR,
+              msg: 'insert data error',
+              data: null
+            })
+          } else {
+            res.json({
+              code: CODE_SUCCESS,
+              msg: 'insert data success',
+              data: null
+            })
+          }
+        }).catch(err => {
           res.json({
             code: CODE_ERROR,
-            msg: 'insert data error',
+            msg: 'error:' + err.message,
             data: null
-          })
-        } else {
-          res.json({
-            code: CODE_SUCCESS,
-            msg: 'insert data success',
-            data: null
-          })
-        }
-      }).catch(err => {
-        res.json({
-          code: CODE_ERROR,
-          msg: 'error:' + err.message,
-          data: null
-        });
-        console.log('--error:', err.message)
-      })
+          });
+          console.log('--error:', err.message)
+        })
+
+
+    }).catch(err => {
+      res.json({
+        code: CODE_ERROR,
+        msg: 'add console error:' + err.message,
+        data: null
+      });
+    })
 
 
   }).catch((err) => {
-    console.log('add error:' + err.message)
+    res.json({
+      code: CODE_ERROR,
+      msg: 'error:' + err.message,
+      data: null
+    });
+    console.log('add console error:' + err.message)
   })
 }
 
