@@ -108,6 +108,7 @@ function validRequest(req, res, next) {
                 console.log('username:', username);
                 resolve({ username });
             } catch (error) {
+                console.log('----decode fail:',error)
                 resolve({});
             }
 

@@ -18,7 +18,6 @@ const {
 // insert into logistic.menu_manage(id,text,parent_id,status,visible_permission,create_time,creator,url) VALUES('lknbdrtgbvcseertg865','Planning','56asd0a9876dgafesadf',1,19,'2023-9-29 10:02:49','feenyhe','/home/planning');
 // insert into logistic.menu_manage(id,text,parent_id,status,visible_permission,create_time,creator,url) VALUES('khgiuyuiod79asdadasf','Log','-1',1,19,'2023-9-29 10:01:28','feenyhe','/log');
 
-
 function customerQuery(req, res, next) {
     validRequest(req, res, next).then(() => {
         const query = `select * from customer;`;

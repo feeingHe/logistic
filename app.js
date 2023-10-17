@@ -34,12 +34,17 @@ app.use(bodyParser.urlencoded({ extended: true })); // 解析form表单提交的
 
 
 app.use('/', routes);
-app.get('/index', function(req, res) {
-    res.render('index', {title: 'Express'});
+app.get('/index', function (req, res) {
+    res.render('index', { title: 'Express' });
 });
 app.listen(port, () => { // 监听端口
-	console.log('服务已启动 http://localhost:' + port);
+    console.log('服务已启动 http://localhost:' + port);
 })
+
+process.on('uncaughtException', err => {
+    console.log('---发生了奔溃性的错误：', err)
+    //do something
+});
 
 // // 定义全局异常处理中间件
 // app.use((err, req, res) => {

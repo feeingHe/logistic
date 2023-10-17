@@ -37,8 +37,13 @@ function login(req, res, next) {
       successMsg: 'login success',
       res,
     })
-  }).catch((err)=>{
-    console.log('add error:' + err.message)
+  }).catch((err) => {
+    res.json({
+      code: CODE_ERROR,
+      msg: 'login error:' + err.message,
+      data: null
+    })
+    console.log('login error:' + err.message)
   })
 }
 
@@ -98,7 +103,12 @@ function register(req, res, next) {
           data: null
         })
       })
-  }).catch((err)=>{
+  }).catch((err) => {
+    res.json({
+      code: CODE_ERROR,
+      msg: 'register error:' + err.message,
+      data: null
+    })
     console.log('register error:' + err.message)
   })
 }
@@ -156,11 +166,68 @@ function resetPwd(req, res, next) {
           })
         }
       })
-  }).catch((err)=>{
+      .catch(() => {
+        res.json({
+          code: CODE_ERROR,
+          msg: 'Incorrect account or password',
+          data: null
+        })
+      })
+  }).catch((err) => {
+    res.json({
+      code: CODE_ERROR,
+      msg: 'resetPwd error:' + err.message,
+      data: null
+    })
     console.log('resetPwd error:' + err.message)
   })
 }
 
+// 重置密码
+function toAuthenticate(req, res, next) {
+  validRequest(req, res, next).then(() => {
+    let { account, password } = req.body;
+    const errorFields = checkRequiredField({ account, password });
+    if (errorFields && errorFields.length) {
+      res.json({
+        code: CODE_ERROR,
+        msg: errorFields.join(',') + ' can not be empty',
+        data: null
+      })
+      return;
+    }
+    validateUser(account, md5(password))
+      .then(data => {
+        if (data) {
+          res.json({
+            code: CODE_SUCCESS,
+            msg: 'Authenticate sucess',
+            data: null
+          })
+        } else {
+          res.json({
+            code: CODE_ERROR,
+            msg: 'Incorrect username or password',
+            data: null
+          })
+        }
+      })
+      .catch(() => {
+        res.json({
+          code: CODE_ERROR,
+          msg: 'Incorrect account or password',
+          data: null
+        })
+      })
+  }).catch((err) => {
+    res.json({
+      code: CODE_ERROR,
+      msg: 'Authenticate error:' + err.message,
+      data: null
+    })
+    console.log('Authenticate error:' + err.message)
+  })
+}
 
 
 // 校验用户名和密码
@@ -178,5 +245,6 @@ function findUser(account) {
 module.exports = {
   login,
   register,
-  resetPwd
+  resetPwd,
+  toAuthenticate
 }

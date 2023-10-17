@@ -92,13 +92,13 @@ function addEnquiry(req, res, next) {
       return;
     }
     const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
-    const dateDay = timestamp.split(' ')[0].replace(/-/g, '');
+    const yearMonth = timestamp.split('-')[0] + timestamp.split('-')[1];
     // delete from booking_manage WHERE unique_id LIKE '%20231007%';
-    const queryUniqueIdSql = `SELECT * from booking_manage WHERE unique_id LIKE '%${dateDay}%';`;
+    const queryUniqueIdSql = `SELECT * from booking_manage WHERE unique_id LIKE '%${yearMonth}%';`;
     querySql(queryUniqueIdSql).then((todayDataList = []) => {
       const uniqueIdStack = todayDataList.map(list => list.unique_id).sort();
       // unique_id no
-      const no = +(uniqueIdStack.slice(-1)[0] || (dateDay + "0000")) + 1;
+      const no = +(uniqueIdStack.slice(-1)[0] || (yearMonth + "0000")) + 1;
       uniqueIdStack.push(no);
       const fields = [
         { key: 'id', type: 'string', val: getUuid(32) },
@@ -332,7 +332,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'saler', type: 'string', val: assginedData.saler },
               { key: 'customer', type: 'string', val: assginedData.customer },
               { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
-              { key: 'creator', type: 'string', val: username || 'feeny' },
+              { key: 'creator', type: 'string', val: username},
               { key: 'status', type: 'number', val: assginedData.status },
               { key: 'parent_status', type: 'number', val: data.status },
               { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },

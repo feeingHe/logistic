@@ -32,6 +32,9 @@ router.post('/register', vaildator, service.register);
 // 密码重置路由
 router.post('/resetPwd', resetPwdVaildator, service.resetPwd);
 
+// 认证
+router.post('/toAuthenticate', resetPwdVaildator, service.toAuthenticate);
+
 
 module.exports = router;
 

@@ -50,7 +50,7 @@ function queryLog(req, res, next) {
     const fields = [
       { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
       { key: 'creator', type: 'string', val: operator, isLike: true },
-      { key: 'status', type: 'array', val: [101, 102], isNot: true },
+      // { key: 'status', type: 'array', val: [101, 102], isNot: true },
     ];
     if (sort_key_list instanceof Array) {
       sort_key_list.forEach(key => {
