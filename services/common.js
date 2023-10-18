@@ -132,9 +132,8 @@ function getNewTokenByRefreshToken(req, res) {
 }
 const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     const sqlStart = `SELECT *
-    FROM ${dbName}
-    WHERE `;
-    let sqlMain = ``;
+    FROM ${dbName} `;
+    let sqlMain = `WHERE `;
     let otherSql = ``;
     let orderSql = ``;
     const hasQuot = ['string'];
