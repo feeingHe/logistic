@@ -185,7 +185,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     if (orders && orders.length) {
         orderSql = "ORDER BY " + orders.join(',') + " DESC "
     }
-    if (sqlMain) {
+    if (sqlMain || otherSql) {
         sqlMain = ` WHERE ` + sqlMain;
     }
     return (sqlStart + sqlMain + otherSql + orderSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
@@ -193,8 +193,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
 
 const returnQueryTotalSql = (dbName, fields = []) => {
     const sqlStart = `SELECT COUNT(*) 
-    FROM ${dbName}
-    WHERE `;
+    FROM ${dbName} `;
     let sqlMain = ``;
     let otherSql = ``;
     const hasQuot = ['string'];
@@ -237,7 +236,9 @@ const returnQueryTotalSql = (dbName, fields = []) => {
             }).join(',')}) `;
         }
     })
-
+    if (sqlMain || otherSql) {
+        sqlMain = ` WHERE ` + sqlMain;
+    }
     return (sqlStart + sqlMain + otherSql + `;`).replace(/\n|\s+/g, ' ');
 }
 
