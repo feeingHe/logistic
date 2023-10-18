@@ -80,7 +80,7 @@ function validRequest(req, res, next) {
         const requestId = req.get('X-requestId');
         const requestUrl = req.originalUrl;
         console.log('-------------- NEW REQUEST ------------');
-        console.table({ 'requestId': requestId, 'requestTime': moment().format('YYYY-MM-DD HH:mm:ss'),requestUrl });
+        console.table({ 'requestId': requestId, 'requestTime': moment().format('YYYY-MM-DD HH:mm:ss'), requestUrl });
 
         const requestMsg = requestId + ':' + requestUrl;
         if (voidXsrfStacks.includes(requestMsg)) {
@@ -108,7 +108,7 @@ function validRequest(req, res, next) {
                 console.log('username:', username);
                 resolve({ username });
             } catch (error) {
-                console.log('----decode fail:',error)
+                console.log('----decode fail:', error)
                 resolve({});
             }
 
@@ -133,7 +133,7 @@ function getNewTokenByRefreshToken(req, res) {
 const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     const sqlStart = `SELECT *
     FROM ${dbName} `;
-    let sqlMain = `WHERE `;
+    let sqlMain = ``;
     let otherSql = ``;
     let orderSql = ``;
     const hasQuot = ['string'];
@@ -146,20 +146,20 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
             otherArrayParams.push({ key, val, type, isNot });
             return;
         }
-        if(type === 'sortIndex') {
+        if (type === 'sortIndex') {
             orders.push(key)
             return;
         }
         if (val !== undefined) {
             if (sqlMain) {
-                if (isLike) {
+                if (isLike && !!val) {
                     sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
                 } else {
                     sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
                 }
 
             } else {
-                if (isLike) {
+                if (isLike && !!val) {
                     sqlMain += key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
                 } else {
                     sqlMain += key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
@@ -182,10 +182,12 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
             }).join(',')}) `;
         }
     })
-    if(orders && orders.length) {
+    if (orders && orders.length) {
         orderSql = "ORDER BY " + orders.join(',') + " DESC "
     }
-
+    if (sqlMain) {
+        sqlMain = ` WHERE ` + sqlMain;
+    }
     return (sqlStart + sqlMain + otherSql + orderSql + ` LIMIT ${page_size} OFFSET ${page_size * (page_num - 1)};`).replace(/\n|\s+/g, ' ');
 }
 
