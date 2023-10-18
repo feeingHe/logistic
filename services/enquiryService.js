@@ -11,6 +11,7 @@ const { checkRequiredField, getUuid } = require('../utils/util')
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_ERROR_NOT_THE_LASTEST,
 } = require('../utils/constant');
 const moment = require('moment');
 
@@ -195,6 +196,14 @@ function deleteEnquiry(req, res, next) {
           data: null
         })
       } else {
+        if ([101, 102].includes(data.status)) {
+          res.json({
+            code: CODE_ERROR_NOT_THE_LASTEST,
+            msg: 'The data has been modified by someone else. Please refresh to get the latest status',
+            data: null
+          })
+          return;
+        }
         const deleteSql = `UPDATE booking_manage SET status=101 WHERE id = '${id}';`;
 
         querySql(deleteSql)
@@ -319,7 +328,7 @@ function modifyEnquiry(req, res, next) {
       } else {
         if ([101, 102].includes(data.status)) {
           res.json({
-            code: CODE_ERROR,
+            code: CODE_ERROR_NOT_THE_LASTEST,
             msg: 'The data has been modified by someone else. Please refresh to get the latest status',
             data: null
           })

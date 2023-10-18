@@ -7,6 +7,7 @@
 
 module.exports = {
   CODE_ERROR: -1, // 请求响应失败code码
+  CODE_ERROR_NOT_THE_LASTEST: -2, // 请求响应失败code码 -- 修改的数据已经被修改过
   CODE_SUCCESS: 0, // 请求响应成功code码
   CODE_TOKEN_EXPIRED: 401, // 授权失败
   PRIVATE_KEY: 'logistic', // 自定义jwt加密的私钥
