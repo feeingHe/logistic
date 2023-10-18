@@ -282,6 +282,14 @@ function modifyConsole(req, res, next) {
           data: null
         })
       } else {
+        if ([101, 102].includes(data.status)) {
+          res.json({
+            code: CODE_ERROR,
+            msg: 'The data has been modified by someone else. Please refresh to get the latest status',
+            data: null
+          })
+          return;
+        }
         const deleteSql = `UPDATE console_manage SET status=102 WHERE id = '${id}';`;
 
         querySql(deleteSql).then((queryData) => {

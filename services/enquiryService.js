@@ -309,6 +309,7 @@ function modifyEnquiry(req, res, next) {
       return;
     }
     findData(id).then(data => {
+
       if (!data || data.length === 0) {
         res.json({
           code: CODE_ERROR,
@@ -316,6 +317,15 @@ function modifyEnquiry(req, res, next) {
           data: null
         })
       } else {
+        if ([101, 102].includes(data.status)) {
+          res.json({
+            code: CODE_ERROR,
+            msg: 'The data has been modified by someone else. Please refresh to get the latest status',
+            data: null
+          })
+          return;
+        }
+
         const deleteSql = `UPDATE booking_manage SET status=102 WHERE id = '${id}';`;
 
         querySql(deleteSql).then((queryData) => {
@@ -332,7 +342,7 @@ function modifyEnquiry(req, res, next) {
               { key: 'saler', type: 'string', val: assginedData.saler },
               { key: 'customer', type: 'string', val: assginedData.customer },
               { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
-              { key: 'creator', type: 'string', val: username},
+              { key: 'creator', type: 'string', val: username },
               { key: 'status', type: 'number', val: assginedData.status },
               { key: 'parent_status', type: 'number', val: data.status },
               { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },
