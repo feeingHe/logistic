@@ -11,6 +11,7 @@ const { checkRequiredField, getUuid } = require('../utils/util')
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_TOKEN_EXPIRED,
   CODE_ERROR_NOT_THE_LASTEST,
 } = require('../utils/constant');
 const moment = require('moment');
@@ -97,6 +98,7 @@ function addConsole(req, res, next) {
         { key: 'flight', type: 'string', val: flight },
         { key: 'airline', type: 'string', val: airline },
         { key: 'dest', type: 'string', val: dest },
+        { key: 'init_create_time', type: 'string', val: timestamp },
         { key: 'create_time', type: 'string', val: timestamp },
         { key: 'creator', type: 'string', val: username },
         { key: 'status', type: 'number', val: status },
@@ -198,10 +200,11 @@ function deleteConsole(req, res, next) {
                 { key: 'flight', type: 'string', val: data.flight },
                 { key: 'airline', type: 'string', val: data.airline },
                 { key: 'dest', type: 'string', val: data.dest },
+                { key: 'init_create_time', type: 'string', val: moment(data.init_create_time).format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'create_time', type: 'string', val: timestamp },
                 { key: 'creator', type: 'string', val: username },
                 { key: 'status', type: 'number', val: 0 },
-                { key: 'parent_status', type: 'number', val: data.status },
+                { key: 'data_origin_status', type: 'number', val: 0},
                 { key: 'action_type', type: 'string', val: 'deleted' },
                 { key: 'extend', type: 'string', val: data.extend }
               ];
@@ -316,10 +319,11 @@ function modifyConsole(req, res, next) {
               { key: 'airline', type: 'string', val: assginedData.airline },
 
               { key: 'dest', type: 'string', val: assginedData.dest },
+              { key: 'init_create_time', type: 'string', val: moment(data.init_create_time).format('YYYY-MM-DD HH:mm:ss')},
               { key: 'create_time', type: 'string', val: timestamp },
               { key: 'creator', type: 'string', val: username },
               { key: 'status', type: 'number', val: assginedData.status },
-              { key: 'parent_status', type: 'number', val: data.status },
+              { key: 'data_origin_status', type: 'number', val: assginedData.status },
               { key: 'action_type', type: 'string', val: 'modified' },
               { key: 'extend', type: 'string', val: assginedData.extend }
             ];
@@ -370,11 +374,18 @@ function modifyConsole(req, res, next) {
 }
 // Console query
 function queryConsole(req, res, next) {
-  validRequest(req, res, next).then(() => {
+  validRequest(req, res, next).then(({username}) => {
+    if(!username) {
+      res.status(CODE_TOKEN_EXPIRED).json({
+        code: CODE_ERROR,
+        msg: 'token expired',
+      })
+      return;
+    }
     let { id, unique_id, parent_id, status, flight, airline, dest, name, creator, sort_key_list = ['create_time'], orders_limit = 10000, page_num = 1, page_size = 10 } = req.body;
     const fields = [
-      { key: 'id', type: 'string', val: id, isLike: true },
-      { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
+      { key: 'id', type: 'array', val: id, isLike: true },
+      { key: 'unique_id', type: 'array', val: unique_id, isLike: true },
       { key: 'parent_id', type: 'string', val: parent_id },
       { key: 'status', type: 'array', val: status !== undefined ? status : [1, 2] },
       { key: 'name', type: 'string', val: name, isLike: true },
@@ -410,7 +421,7 @@ function queryConsole(req, res, next) {
             pageNum: 1,
             pageSize: orders_limit,
             callback(ordersList) {
-              const totalSql = `SELECT COUNT(*) FROM console_manage WHERE status IN (${status !== undefined ? status.join(',') : '1, 2'});`;
+              const totalSql =  sql.replace('*','COUNT(*)');
               querySql(totalSql).then(total => {
                 res.json({
                   code: CODE_SUCCESS,

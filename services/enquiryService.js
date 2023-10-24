@@ -11,6 +11,7 @@ const { checkRequiredField, getUuid } = require('../utils/util')
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_TOKEN_EXPIRED,
   CODE_ERROR_NOT_THE_LASTEST,
 } = require('../utils/constant');
 const moment = require('moment');
@@ -108,6 +109,7 @@ function addEnquiry(req, res, next) {
         { key: 'dest', type: 'string', val: dest },
         { key: 'saler', type: 'string', val: saler },
         { key: 'customer', type: 'string', val: customer },
+        { key: 'init_create_time', type: 'string', val: timestamp },
         { key: 'create_time', type: 'string', val: timestamp },
         { key: 'creator', type: 'string', val: username },
         { key: 'status', type: 'number', val: status },
@@ -219,10 +221,11 @@ function deleteEnquiry(req, res, next) {
                 { key: 'dest', type: 'string', val: data.dest },
                 { key: 'saler', type: 'string', val: data.saler },
                 { key: 'customer', type: 'string', val: data.customer },
+                { key: 'init_create_time', type: 'string', val: moment(data.init_create_time).format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'creator', type: 'string', val: username },
                 { key: 'status', type: 'number', val: 0 },
-                { key: 'parent_status', type: 'number', val: data.status },
+                { key: 'data_origin_status', type: 'number', val: 0 },
                 { key: 'ready_date', type: 'string', val: moment(data.ready_date).format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'transit_time_require', type: 'string', val: data.transit_time_require },
 
@@ -350,10 +353,11 @@ function modifyEnquiry(req, res, next) {
               { key: 'dest', type: 'string', val: assginedData.dest },
               { key: 'saler', type: 'string', val: assginedData.saler },
               { key: 'customer', type: 'string', val: assginedData.customer },
+              { key: 'init_create_time', type: 'string', val: moment(data.init_create_time).format('YYYY-MM-DD HH:mm:ss') },
               { key: 'create_time', type: 'string', val: moment().format('YYYY-MM-DD HH:mm:ss') },
               { key: 'creator', type: 'string', val: username },
               { key: 'status', type: 'number', val: assginedData.status },
-              { key: 'parent_status', type: 'number', val: data.status },
+              { key: 'data_origin_status', type: 'number', val: assginedData.status },
               { key: 'ready_date', type: 'string', val: moment(assginedData.ready_date).format('YYYY-MM-DD HH:mm:ss') },
               { key: 'transit_time_require', type: 'string', val: assginedData.transit_time_require },
 
@@ -430,7 +434,15 @@ function modifyEnquiry(req, res, next) {
 // Enquiry query
 // queryParams : {fields:[];callback:()=>any;page_num:number;page_size:number;}
 function queryEnquiry(req, res, next, queryParams = {}) {
-  (queryParams.isResolve ? Promise.resolve() : validRequest(req, res, next)).then(() => {
+  (queryParams.isResolve ? Promise.resolve({ username: 'any' }) : validRequest(req, res, next)).then(({ username }) => {
+
+    if (!username) {
+      res.status(CODE_TOKEN_EXPIRED).json({
+        code: CODE_ERROR,
+        msg: 'token expired',
+      })
+      return;
+    }
     const defaultStatus = [1, 2, 3];
     let fields = [], pageNum = 1, pageSize = 10, orderStatus = defaultStatus;
     if (queryParams.fields) {
@@ -443,8 +455,8 @@ function queryEnquiry(req, res, next, queryParams = {}) {
       let { id, unique_id, parent_id, status, saler, customer, dest, flight, transit_time_require, is_create_confirmed, console_id, sort_key_list = ['unique_id'], page_num = 1, page_size = 10 } = req.body;
       orderStatus = status !== undefined ? status : defaultStatus;
       fields = [
-        { key: 'id', type: 'string', val: id, isLike: true },
-        { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
+        { key: 'id', type: 'array', val: id, isLike: true },
+        { key: 'unique_id', type: 'array', val: unique_id, isLike: true },
         { key: 'parent_id', type: 'string', val: parent_id },
 
         { key: 'status', type: 'array', val: orderStatus },
@@ -468,9 +480,9 @@ function queryEnquiry(req, res, next, queryParams = {}) {
       }
     }
 
-    const sql = returnQuerySql('booking_manage', fields, pageNum, pageSize);
+    const orderQuerySql = returnQuerySql('booking_manage', fields, pageNum, pageSize);
 
-    querySql(sql)
+    querySql(orderQuerySql)
       .then((data) => {
         // console.log('删除任务===', data);
         if (data && data.length) {
@@ -480,9 +492,9 @@ function queryEnquiry(req, res, next, queryParams = {}) {
             const queryQuotesSql = `SELECT * from quotes_manage WHERE order_unique_id in (${orderUniqueIds.map(id => {
               if (typeof id === 'string') return `"${id}"`;
               return id;
-            }).join(',')}) AND status NOT IN (0,101,102);`;
+            }).join(',')}) AND status NOT IN (0,101,102) ORDER BY init_create_time DESC;`;
             querySql(queryQuotesSql).then((quotesList) => {
-              const totalSql = `SELECT COUNT(*) FROM booking_manage WHERE status IN (${orderStatus.join(',')});`;
+              const totalSql = orderQuerySql.replace('*', 'COUNT(*)');
 
               querySql(totalSql).then(total => {
                 const result = {

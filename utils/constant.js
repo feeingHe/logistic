@@ -4,7 +4,6 @@
  * 日期: 2023-9-20
 */
 
-
 module.exports = {
   CODE_ERROR: -1, // 请求响应失败code码
   CODE_ERROR_NOT_THE_LASTEST: -2, // 请求响应失败code码 -- 修改的数据已经被修改过

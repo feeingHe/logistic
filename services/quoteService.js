@@ -11,6 +11,7 @@ const { checkRequiredField, getUuid } = require('../utils/util')
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_TOKEN_EXPIRED,
   CODE_ERROR_NOT_THE_LASTEST,
 } = require('../utils/constant');
 const moment = require('moment');
@@ -97,6 +98,7 @@ function addQuote(req, res, next) {
       { key: 'selling_price', type: 'number', val: selling_price },
       { key: 'flight', type: 'string', val: flight },
       { key: 'saler', type: 'string', val: saler },
+      { key: 'init_create_time', type: 'string', val: timestamp },
       { key: 'create_time', type: 'string', val: timestamp },
       { key: 'creator', type: 'string', val: username },
       { key: 'status', type: 'number', val: status },
@@ -195,10 +197,11 @@ function deleteQuote(req, res, next) {
                 { key: 'selling_price', type: 'number', val: data.selling_price },
                 { key: 'flight', type: 'string', val: data.flight },
                 { key: 'saler', type: 'string', val: data.saler },
+                { key: 'init_create_time', type: 'string', val: moment(data.init_create_time).format('YYYY-MM-DD HH:mm:ss') },
                 { key: 'create_time', type: 'string', val: timestamp },
                 { key: 'creator', type: 'string', val: username },
                 { key: 'status', type: 'number', val: 0 },
-                { key: 'parent_status', type: 'number', val: data.status },
+                { key: 'data_origin_status', type: 'number', val: 0 },
                 { key: 'remark', type: 'string', val: data.remark },
                 { key: 'action_type', type: 'string', val: 'deleted' },
                 { key: 'extend', type: 'string', val: data.extend }
@@ -307,10 +310,11 @@ function modifyQuote(req, res, next) {
               { key: 'selling_price', type: 'number', val: assginedData.selling_price },
               { key: 'flight', type: 'string', val: assginedData.flight },
               { key: 'saler', type: 'string', val: assginedData.saler },
+              { key: 'init_create_time', type: 'string', val: moment(data.init_create_time || undefined).format('YYYY-MM-DD HH:mm:ss') },
               { key: 'create_time', type: 'string', val: timestamp },
               { key: 'creator', type: 'string', val: username },
               { key: 'status', type: 'number', val: assginedData.status },
-              { key: 'parent_status', type: 'number', val: data.status },
+              { key: 'data_origin_status', type: 'number', val: assginedData.status },
               { key: 'remark', type: 'string', val: assginedData.remark },
               { key: 'action_type', type: 'string', val: 'modified' },
               { key: 'extend', type: 'string', val: assginedData.extend }
@@ -363,11 +367,18 @@ function modifyQuote(req, res, next) {
 
 // Quote query
 function queryQuote(req, res, next) {
-  validRequest(req, res, next).then(() => {
+  validRequest(req, res, next).then(({ username }) => {
+    if (!username) {
+      res.status(CODE_TOKEN_EXPIRED).json({
+        code: CODE_ERROR,
+        msg: 'token expired',
+      })
+      return;
+    }
     let { id, unique_id, parent_id, order_unique_id, selling_price, flight, saler, creator, status, page_num = 1, page_size = 10 } = req.body;
     const fields = [
-      { key: 'id', type: 'string', val: id },
-      { key: 'unique_id', type: 'string', val: unique_id },
+      { key: 'id', type: 'array', val: id },
+      { key: 'unique_id', type: 'array', val: unique_id },
       { key: 'parent_id', type: 'string', val: parent_id },
       { key: 'order_unique_id', type: 'string', val: order_unique_id },
       { key: 'selling_price', type: 'number', val: selling_price },

@@ -6,11 +6,12 @@
 
 
 const { querySql } = require('../utils/index');
-const { validRequest, returnQuerySql, returnQueryTotalSql } = require('./common');
+const { validRequest, returnQuerySql } = require('./common');
 const { checkRequiredField } = require('../utils/util')
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_TOKEN_EXPIRED,
 } = require('../utils/constant');
 
 // SELECT * FROM logistic.quotes_manage WHERE id='b6rtlh7czwxgdpofa2q439';
@@ -36,7 +37,14 @@ const {
 
 // log query
 function queryLog(req, res, next) {
-  validRequest(req, res, next).then(() => {
+  validRequest(req, res, next).then(({ username }) => {
+    if (!username) {
+      res.status(CODE_TOKEN_EXPIRED).json({
+        code: CODE_ERROR,
+        msg: 'token expired',
+      })
+      return;
+    }
     let { type, unique_id, operator, sort_key_list = ['create_time'], page_num = 1, page_size = 10 } = req.body;
     const errorFields = checkRequiredField({ type });
     if (errorFields && errorFields.length) {
@@ -48,7 +56,7 @@ function queryLog(req, res, next) {
       return;
     }
     const fields = [
-      { key: 'unique_id', type: 'string', val: unique_id, isLike: true },
+      { key: 'unique_id', type: 'array', val: unique_id, isLike: true },
       { key: 'creator', type: 'string', val: operator, isLike: true },
       // { key: 'status', type: 'array', val: [101, 102], isNot: true },
     ];
@@ -74,7 +82,7 @@ function queryLog(req, res, next) {
       })
     }
     const sql = returnQuerySql(dbName, fields, page_num, page_size);
-    const totalSql = returnQueryTotalSql(dbName, fields);
+    const totalSql = sql.replace('*', 'COUNT(*)');
 
 
     querySql(sql)

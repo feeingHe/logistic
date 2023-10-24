@@ -10,7 +10,7 @@ const express = require('express'); // 引入express模块
 const routes = require('./routes'); //导入自定义路由文件，创建模块化路由
 const app = express();
 const path = require('path'); // 引入path模块
-const port = process.env.PORT || 9188; // 端口
+const port = process.env.PORT || 9199; // 端口
 
 const compression = require('compression');
 

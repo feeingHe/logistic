@@ -202,7 +202,7 @@ function toAuthenticate(req, res, next) {
           res.json({
             code: CODE_SUCCESS,
             msg: 'Authenticate sucess',
-            data: null
+            data
           })
         } else {
           res.json({

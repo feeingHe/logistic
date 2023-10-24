@@ -96,6 +96,7 @@ function validRequest(req, res, next) {
             voidXsrfStacks.push(requestMsg);
         }
         // 如果验证错误，empty不为空
+        console.log('--err:', err.isEmpty())
         if (!err.isEmpty()) {
             // 获取错误信息
             const [{ msg }] = err.errors;
@@ -143,7 +144,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
     fields.forEach(field => {
         const { key, val, type, isLike, isNot } = field;
         if (type === 'array' && val) {
-            otherArrayParams.push({ key, val, type, isNot });
+            otherArrayParams.push({ key, val: Array.isArray(val) ? val : [val], type, isNot });
             return;
         }
         if (type === 'sortIndex') {
@@ -153,9 +154,9 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
         if (val !== undefined) {
             if (sqlMain) {
                 if (isLike && !!val) {
-                    sqlMain += "AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
+                    sqlMain += " AND " + key + ' LIKE ' + (hasQuot.includes(type) ? "'%" + val + "%'" : "%" + val + "%");
                 } else {
-                    sqlMain += "AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
+                    sqlMain += " AND " + key + ' = ' + (hasQuot.includes(type) ? "'" + val + "'" : val);
                 }
 
             } else {
@@ -183,7 +184,7 @@ const returnQuerySql = (dbName, fields = [], page_num = 1, page_size = 10) => {
         }
     })
     if (orders && orders.length) {
-        orderSql = "ORDER BY " + orders.join(',') + " DESC "
+        orderSql = " ORDER BY " + orders.join(',') + " DESC "
     }
     if (sqlMain || otherSql) {
         sqlMain = ` WHERE ` + sqlMain;

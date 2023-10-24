@@ -11,6 +11,7 @@ const { validRequest } = require('./common');
 const {
   CODE_ERROR,
   CODE_SUCCESS,
+  CODE_TOKEN_EXPIRED,
 } = require('../utils/constant');
 
 // covert Array to json by parent_id;
@@ -36,9 +37,16 @@ function covertToJson(list, parentId) {
 // insert into logistic.menu_manage(id,text,parent_id,status,visible_permission,create_time,creator,url) VALUES('khgiuyuiod79asdadasf','Log','-1',1,19,'2023-9-29 10:01:28','feenyhe','/log');
 // quert menu list
 function menuListQuery(req, res, next) {
-  validRequest(req,res, next).then(() => {
+  validRequest(req, res, next).then((username) => {
+    if (!username) {
+      res.status(CODE_TOKEN_EXPIRED).json({
+        code: CODE_ERROR,
+        msg: 'token expired',
+      })
+      return;
+    }
     // const token = req.get('Authorization')
-    const {permission} = decode(req);
+    const { permission } = decode(req);
     const query = `select * from menu_manage where status = 1 and visible_permission >= ${permission || 10}`;
     querySql(query).then((data) => {
       if (data && data.length) {
@@ -55,7 +63,7 @@ function menuListQuery(req, res, next) {
         })
       }
     })
-  }).catch((err)=>{
+  }).catch((err) => {
     console.log('menuListQuery error:' + err.message)
   })
 }
