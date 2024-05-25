@@ -16,7 +16,7 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.29.4",
     "mysql": "^2.18.1",
-    "node-xlsx": "^0.23.0"
+    "node-xlsx": "^0.24.0"
   },
   "devDependencies": {
     "eslint": "^7.32.0",
